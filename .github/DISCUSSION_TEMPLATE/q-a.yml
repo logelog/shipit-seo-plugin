@@ -1,0 +1,24 @@
+title: "[Question]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the workflow and what you have tried. Do not share credentials, sessions, databases or private site data.
+        Report reproducible bugs through Issues. For security concerns, follow [SECURITY.md](https://github.com/logelog/shipit-seo-plugin/blob/main/SECURITY.md).
+  - type: textarea
+    id: question
+    attributes:
+      label: What do you need help with?
+      description: Include the result you want and the relevant steps or settings.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Versions and environment
+      description: Include Shipit SEO, EmDash/admin, Node and database versions where relevant.
+  - type: textarea
+    id: attempts
+    attributes:
+      label: What have you tried?
+      description: Link any relevant guidance and describe what happened. Use synthetic examples.

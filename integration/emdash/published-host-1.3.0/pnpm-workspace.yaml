@@ -1,0 +1,18 @@
+packages: []
+autoInstallPeers: false
+strictPeerDependencies: false
+childConcurrency: 1
+networkConcurrency: 4
+minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  - emdash@1.3.0
+  - '@emdash-cms/admin@1.3.0'
+  - '@emdash-cms/auth@1.3.0'
+  - '@emdash-cms/blocks@1.3.0'
+  - '@emdash-cms/gutenberg-to-portable-text@1.3.0'
+  - '@emdash-cms/registry-client@0.7.1'
+allowBuilds:
+  esbuild: true
+  sharp: true
+  '@parcel/watcher': true
+  core-js-pure: false

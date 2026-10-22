@@ -1,0 +1,50 @@
+---
+// Development fixture only: serves published Pages entries at the public
+// address the host reports for them (/pages/{slug}), so admin links and
+// inspections of a selected page resolve. Drafts and unknown entries are 404s
+// because getEmDashEntry returns published content only.
+import { getEmDashEntry } from "emdash";
+import { createPublicPageContext } from "emdash/page";
+import { EmDashHead, EmDashBodyStart, EmDashBodyEnd } from "emdash/ui";
+
+// This site has no Astro i18n: the unprefixed address serves the site locale,
+// as Shipit's sitemap lists it; `?locale=` stays a review-only override.
+const SITE_LOCALE = "en";
+const { slug } = Astro.params;
+if (!slug) return new Response(null, { status: 404 });
+const locale = Astro.url.searchParams.get("locale") || SITE_LOCALE;
+const { entry, error } = await getEmDashEntry("pages", slug, { locale });
+if (error) throw error;
+const data = (entry?.data ?? {}) as Record<string, unknown>;
+if (!entry || typeof data.id !== "string") return new Response(null, { status: 404 });
+const title = typeof data.title === "string" && data.title ? data.title : slug;
+const excerpt = typeof data.excerpt === "string" ? data.excerpt : "";
+const page = createPublicPageContext({
+	Astro,
+	kind: "content",
+	pageType: "website",
+	title,
+	pageTitle: title,
+	description: excerpt || null,
+	canonical: new URL(Astro.url.pathname, Astro.url.origin).href,
+	siteName: "Dev Site",
+	content: { collection: "pages", id: data.id, slug: entry.id },
+});
+---
+<!doctype html>
+<html lang={typeof data.locale === "string" ? data.locale : "en"}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<title>{title}</title>
+		<EmDashHead page={page} />
+	</head>
+	<body>
+		<EmDashBodyStart page={page} />
+		<main>
+			<h1>{title}</h1>
+			{excerpt ? <p>{excerpt}</p> : null}
+		</main>
+		<EmDashBodyEnd page={page} />
+	</body>
+</html>

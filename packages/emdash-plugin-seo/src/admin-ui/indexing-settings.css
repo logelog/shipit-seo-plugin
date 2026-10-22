@@ -1,0 +1,227 @@
+.shipit-seo-indexing-settings {
+  max-inline-size: 72rem;
+}
+
+.shipit-seo-indexing-settings > .shipit-seo-section-heading h2:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--border-color-kumo-focus, #2b7bbb);
+  outline-offset: 2px;
+}
+
+.shipit-seo-indexing-site {
+  display: grid;
+  gap: 0.75rem;
+  min-inline-size: 0;
+  margin-block: 1rem 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--color-kumo-line, #d9dce1);
+  border-radius: 8px;
+  background: var(--color-kumo-tint, #f3f4f6);
+}
+
+.shipit-seo-indexing-site__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  min-inline-size: 0;
+}
+
+.shipit-seo-indexing-site__head h3 {
+  margin: 0;
+  color: var(--text-color-kumo-strong, #111827);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.shipit-seo-indexing-site__effect {
+  margin: 0;
+  max-inline-size: 64ch;
+  color: var(--text-color-kumo-default, #20242c);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.shipit-seo-indexing-override {
+  margin-block: 0 1.5rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-kumo-line, #d9dce1);
+  border-radius: 8px;
+  color: var(--text-color-kumo-default, #20242c);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.shipit-seo-indexing-state,
+.shipit-seo-indexing-pending,
+.shipit-seo-indexing-kept {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.375rem;
+  min-inline-size: 0;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.shipit-seo-indexing-state > svg,
+.shipit-seo-indexing-pending > svg,
+.shipit-seo-indexing-kept > svg {
+  flex: none;
+}
+
+/* Wider than the space beside the 14px icon, the text would wrap below it; the cap keeps it beside the icon and lets the tag wrap after it. */
+.shipit-seo-indexing-pending > svg + span {
+  min-inline-size: 0;
+  max-inline-size: calc(100% - 14px - 0.375rem);
+}
+
+.shipit-seo-indexing-state {
+  color: var(--text-color-kumo-default, #20242c);
+  font-weight: 600;
+}
+
+.shipit-seo-indexing-state[data-choice="noindex"] {
+  color: var(--text-color-kumo-warning, #92400e);
+}
+
+.shipit-seo-indexing-pending,
+.shipit-seo-indexing-kept {
+  color: var(--text-color-kumo-subtle, #667085);
+}
+
+/* Subtle text on the tint background falls below 4.5:1 in the light theme. */
+.shipit-seo-indexing-site .shipit-seo-indexing-pending {
+  color: var(--text-color-kumo-default, #20242c);
+}
+
+/* Kumo's brand focus ring falls below 3:1 on the dark tint background; the link colour keeps 3:1 in both themes.
+   A gap in the block colour keeps the ring apart from the checked radio's fill, which the link colour does not contrast with. */
+.shipit-seo-indexing-site [role="radio"]:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-kumo-tint, #f3f4f6), 0 0 0 4px var(--text-color-kumo-link, #1769c2);
+}
+
+.shipit-seo-indexing-tag {
+  padding-inline: 0.375rem;
+  border: 1px solid var(--color-kumo-line, #d9dce1);
+  border-radius: 999px;
+  color: var(--text-color-kumo-default, #20242c);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.shipit-seo-indexing-choice {
+  min-inline-size: 0;
+}
+
+.shipit-seo-indexing-help {
+  padding-block: 1rem 1.5rem;
+  border-block-start: 1px solid var(--color-kumo-line, #d9dce1);
+}
+
+.shipit-seo-indexing-help > summary {
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  color: var(--text-color-kumo-default, #20242c);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.shipit-seo-indexing-help > summary:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--border-color-kumo-focus, #2b7bbb);
+  outline-offset: 2px;
+}
+
+.shipit-seo-indexing-help > div {
+  display: grid;
+  gap: 0.5rem;
+  margin-block-start: 0.75rem;
+}
+
+.shipit-seo-indexing-help p,
+.shipit-seo-indexing-help ol {
+  margin: 0;
+  max-inline-size: 64ch;
+  color: var(--text-color-kumo-subtle, #667085);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.shipit-seo-indexing-help ol {
+  display: grid;
+  gap: 0.25rem;
+  padding-inline-start: 1.25rem;
+}
+
+.shipit-seo-indexing-help strong {
+  color: var(--text-color-kumo-default, #20242c);
+  font-weight: 600;
+}
+
+.shipit-seo-type-indexing {
+  display: grid;
+  gap: 0.75rem;
+  min-inline-size: 0;
+  padding-block: 1.5rem;
+  border-block-start: 1px solid var(--color-kumo-line, #d9dce1);
+}
+
+.shipit-seo-type-indexing p {
+  margin: 0;
+}
+
+.shipit-seo-indexing-list {
+  display: grid;
+  gap: 0.75rem;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.shipit-seo-indexing-list ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--color-kumo-line, #d9dce1);
+  border-radius: 8px;
+}
+
+.shipit-seo-indexing-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.8fr) minmax(0, 1.4fr) auto;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  min-inline-size: 0;
+  padding: 0.625rem 0.75rem;
+}
+
+.shipit-seo-indexing-row + .shipit-seo-indexing-row {
+  border-block-start: 1px solid var(--color-kumo-hairline, #eceef0);
+}
+
+.shipit-seo-indexing-row__name {
+  min-inline-size: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.shipit-seo-indexing-row__status {
+  display: grid;
+  gap: 0.25rem;
+  min-inline-size: 0;
+}
+
+@container shipit-seo-workspace (max-width: 40rem) {
+  .shipit-seo-indexing-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

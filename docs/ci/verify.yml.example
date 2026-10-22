@@ -1,0 +1,54 @@
+# Reference only. This file is not an active GitHub Actions workflow.
+# Full verification needs a prepared offline npm consumer cache.
+name: Verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Native EmDash 1.3.0
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - run: corepack enable
+      - name: Check public repository files
+        run: node scripts/check-public-files.mjs
+      - name: Check translation catalogues
+        run: node scripts/check-translations.mjs
+      - name: Install pinned host
+        id: setup
+        run: pnpm dev:setup --target native-1.3.0
+      - name: Verify native target
+        id: verify
+        run: pnpm verify --target native-1.3.0
+      - name: Collect bounded verification evidence
+        if: always()
+        env:
+          SHIPIT_CI_SETUP_OUTCOME: ${{ steps.setup.outcome }}
+          SHIPIT_CI_VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+        run: node tooling/plugin-dev/ci-evidence.mjs --target native-1.3.0
+      - name: Retain verification receipt
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: native-verification-${{ github.sha }}
+          path: artifacts/plugin-dev/native-1.3.0-ci-evidence.json
+          if-no-files-found: error
+          retention-days: 7

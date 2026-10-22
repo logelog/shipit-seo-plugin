@@ -1,0 +1,36 @@
+name: Translation
+description: Improve interface wording or propose a language contribution.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        See [the translation guide](https://github.com/logelog/shipit-seo-plugin/blob/main/CONTRIBUTING.md#translate-the-interface) for catalogue locations and checks.
+        The initial translation scope covers navigation and Indexing. Translate interface values, not routes, schema properties or user content.
+  - type: input
+    id: locale
+    attributes:
+      label: Language and locale tag
+      placeholder: Dutch (nl)
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Contribution
+      options:
+        - Correct existing wording
+        - Add a language catalogue
+    validations:
+      required: true
+  - type: textarea
+    id: wording
+    attributes:
+      label: Screen and wording
+      description: For a correction, include the screen, message key when known, current wording and proposed text. For a new language, describe the catalogue you plan to contribute.
+    validations:
+      required: true
+  - type: textarea
+    id: review
+    attributes:
+      label: Review and checks
+      description: State whether a fluent speaker reviewed it and which catalogue, narrow-layout or accessible-label checks you completed. You can also state what still needs help.

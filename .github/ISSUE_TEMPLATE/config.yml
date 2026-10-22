@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/logelog/shipit-seo-plugin/discussions
+    about: Ask for help or discuss an idea before planning a change.
+  - name: Report a security vulnerability privately
+    url: https://github.com/logelog/shipit-seo-plugin/security/advisories/new
+    about: Keep vulnerability details out of public issues. See SECURITY.md for an email fallback.

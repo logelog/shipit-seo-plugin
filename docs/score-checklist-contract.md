@@ -1,0 +1,202 @@
+# Score and checklist contract (analyzer 22)
+
+Applies from `0.4.0-beta.53`. This contract supersedes earlier scoring thresholds
+and the line in `editor-popup-contract.md` that keeps checklist issues, advice,
+missing evidence and weighted calculations unchanged.
+
+## Scope
+
+Make the entry score honest and the editor checklist short. One shared engine
+and one shared presentation module serve browser checks, **Analyze this
+entry**, scans, the overview and the sandbox panel. No provider request, scan,
+history write, hosting service or translation is added. The keyword field,
+typography and light palette stay. The sandbox registry panel uses the shared
+groups; the sandbox **Content analyzer** page keeps its category list, and
+full sandbox parity for that page is a deferred roadmap item.
+
+Scoring sources, read 2026-10-22:
+[Google's SEO starter guide](https://developers.google.com/search/docs/fundamentals/seo-starter-guide#things-we-believe-you-shouldnt-focus-on)
+prescribes no minimum or maximum word count.
+[Rank Math](https://rankmath.com/kb/score-100-in-tests/) gives no credit below
+600 words only for its length test, not an overall score limit.
+[Yoast skips density checks below 100 words](https://yoast.com/what-is-keyphrase-density-and-why-is-it-important/)
+and [varies word-count guidance by content type](https://yoast.com/blog-post-word-count-seo/).
+Shipit's Article 600-word pass threshold and score limit of 70 below it are
+product calibration, not a Google mandate or an exact competitor rule. The
+score is a Shipit checklist score, not a Google score or a ranking prediction.
+
+## Rules
+
+1. **Row words.** Scored pass: **Passed**. Scored review: **Partly met**.
+   Scored fail: **Failed**. Advice review: **Suggestion**. Advice pass:
+   **Passed**. Unavailable: **Not checked**. Not applicable: no row. Earlier
+   analyzer: **Earlier result**. No status value is added; each policy lists
+   its allowed outcomes and the engine refuses others.
+2. **Not applicable is structural:** no focus keyword, no secondary keywords,
+   no images, image alt checks off, no links, no section headings, a body
+   format without links or headings, an opaque slug, no title or description
+   to fit, `nosnippet`, an unpublished entry's indexing directive, the
+   profile, no body text for keyword placement advice, a title without the
+   focus keyword for phone visibility (the title row already fails), general
+   content under 300 words without section headings for heading advice, no
+   body images for alt checks (image fields such as the featured image are
+   not body images), or a readability sample below its minimum. Short text
+   is otherwise scored by body text length. A known body under 100 words makes
+   the keyword repetition ratio not applicable because its sample is too small.
+3. **Words** are counted with `Intl.Segmenter` word segments when available,
+   otherwise whitespace, over all extracted body text. Keywords in scripts
+   written without spaces match as substrings. Browser and server use the same
+   extractor. Unsupported blocks can only add words: a short count with such
+   blocks is **Not checked**, a passing count stands. Browser checks mark the
+   body image and secondary keyword rows **Not checked** only when the saved
+   data has no own `content` field, the one case in which the server can read
+   another body field; otherwise both sides evaluate them from the same body.
+4. **Score** is `round(100 x earned / available)` over evaluated scored rows.
+   Partly met earns 35%. Limits are derived from rows; the lowest applies and
+   the active cap is named beside the score. Full calculations remain in the analysis result, not the editor summary:
+   - missing title: 49;
+   - article body under 50 words: 40; 50 to 599 words: 70;
+   - focus keyword repetition failed: 79;
+   - focus keyword in none of title, description and body text: 79.
+5. **Number** requires every weighted row to have been evaluated. Opening an
+   entry runs basic browser checks and shows a number without enabling optional
+   server analysis. A configured assessment profile takes priority; otherwise
+   the built-in `posts` collection uses Article, and Pages and custom collections
+   use General content. The header names the default checks, and Analysis
+   options offers a profile override. This fallback never saves a profile,
+   starts server analysis or derives its choice from schema output. Suggestions,
+   not-applicable rows and an unset keyword never hide it. A weighted row that
+   could not be checked shows a dash and **Partially checked**; so does a
+   General entry whose body text length could not be checked, although that
+   row carries no weight there. A General entry under 50 words shows a dash
+   and **Too little text to score**. Every
+   surface (editor, list, toast, overview, history, scan, sandbox) uses the
+   same display decision; dashed results stay out of averages and trends.
+6. **Bands** (Shipit guidance): 80+ **Good**, 50-79 **Needs improvement**,
+   under 50 **Poor**. Status and grade follow the band of the limited score.
+7. **Counts.** Issues are Failed or Partly met rows. A group pill reads
+   `N issues[, M suggestions]`, else `M suggestions`, else `K not checked`,
+   else **All good** when a row applies, else **Not applicable**. The header
+   shows the sums of the group counts from one function. Needs-attention
+   overview counts use issues only.
+8. **Rows.** Order: Failed, Partly met, Suggestion, Not checked, Passed;
+   heavier first. Each row shows icon, label and status word on line 1, with
+   the whole label at narrow widths. Only a Failed, Partly met or Suggestion
+   row with a target shows one action at the row end, on line 1 or, at narrow
+   widths, below the finding, and only when that target is available (**Add
+   keyword**, **Edit title**, **Edit description**, **Review URL**, **Edit
+   image**, **Open Advanced**). **Review URL** opens the saved URL review,
+   since the slug is edited in the host. Detail,
+   recommendation (also for Not checked), evidence and basis open on demand.
+   Not-applicable rows collapse into one closed `N not applicable` list.
+9. **Keywords are optional.** Without one, the number carries the qualifier
+   **No focus keyword**, after the limit text when a limit lowered the number,
+   and a Suggestion row offers **Add keyword**. With one,
+   that row is hidden and a missing primary keyword fails title, description
+   and body text rows. URL and placement checks are advice. Secondary keywords
+   feed advice only.
+10. **Repetition**: a known body under 100 words makes the ratio not applicable.
+    At 100 words or more, occurrences divided by body words above 3.5% with at
+    least 3 occurrences fails **Focus keyword repetition**. Feedback states the
+    count and percentage, without diagnosing spam.
+11. **Snippet fit** uses the preview's own metrics and widths from one shared
+    module. Every state says "estimate", names the device and the cut point,
+    measures the resolved text including what a Shipit template adds,
+    excludes text the theme adds and never cites a character limit as a
+    Google rule. A generated description asks for a written one. The
+    publication date the preview shows before the description shares its
+    lines in Description fit, the field estimate and the preview alike. A cut
+    falls at the last whole word within 20 graphemes, otherwise where the
+    text overflows. Evidence names fields in words, never storage keys.
+12. **One source.** Header, checklist and scope note show the same result.
+    When a profile is configured, they use current saved analysis matching the
+    saved version and keywords, otherwise browser checks. With a default
+    browser profile they use that browser result, so an older stored or session
+    number cannot mask the current default checks. Browser module settings come from the entry preview. A
+    stored result read on load is shown once one freshness read of its exact
+    inputs confirms it, with no analysis or write; while analysis is admitted,
+    a return to the tab confirms it again. Both sources name profiles alike
+    (Article, General content).
+13. **Accessibility.** The ring is `role="img"` named "SEO score N out of 100"
+    or "No SEO score"; rows are list items; pills and statuses are text; dark
+    pills use `[data-mode="dark"]`; no live region on the score.
+14. **Versioning.** Analyzer 22 bumps the admin contract to 47, the engine version
+    to beta.53 and the comparison policy. Analyzer 21 and earlier results stay
+    readable in history but never render as a current number, band or meter
+    and never enter current comparisons. They read **Earlier analyzer. Analyze
+    again.** A scan resumed
+    across the upgrade pauses for a policy change. Updating does not reanalyze
+    entries or activate optional analysis or providers.
+
+## Checks
+
+Maximum 89 points for articles and 79 for general entries. Outcomes: P pass,
+R review, F fail.
+
+| Group | Check | Weight, outcomes | Rule |
+| --- | --- | --- | --- |
+| Basic SEO | Title | 14, P/F | Resolved title present (Google practice) |
+| Basic SEO | Description | 14, P/F | Resolved description present |
+| Basic SEO | Public URL | 8, P/F | Valid public http(s) URL |
+| Basic SEO | Body text length | article 10, P/R/F; general advice | Article: 600+ P, 300-599 R, under 300 F. General: Suggestion under 100 |
+| Basic SEO | Focus keyword | advice | Suggestion when unset |
+| Basic SEO | Keyword in title, description, body text | 4, 3, 3, P/F | Literal primary phrase (Google practice) |
+| Basic SEO | Keyword in URL, introduction, subheading | advice | URL wording notes redirects |
+| Basic SEO | Secondary keywords | advice | Each appears somewhere |
+| Additional | Social image | 8, P/R | Image set; site fallback only adds a Suggestion |
+| Additional | Image alt text | 6, P/F | Every body image has alt (Google practice) |
+| Additional | Internal links | 5, article P/F, general P/R | Excludes fragment-only and self links |
+| Additional | Link text | 3, P/R | No generic labels (Google practice) |
+| Additional | Focus keyword repetition | 4, P/F | Rule 10 |
+| Additional | Featured image, schema, canonical, empty alt | advice | Empty alt covers body images only |
+| Search snippet | Title fit, description fit, keyword visible on phones | advice | Rule 11 |
+| Content readability | Sentence length | 4, P/R | Average 25 words or fewer; n/a under 60 words or 3 sentences |
+| Content readability | Paragraph length | 3, P/R | Longest 120 words or fewer; n/a without paragraphs |
+| Content readability | Heading structure | advice | n/a for general content under 300 words without section headings |
+
+Readability limits are Shipit guidance written for English. The indexing
+directive is not a row: an excluded entry shows the existing banner.
+
+## Acceptance
+
+Fixtures: published, canonical matching, social image set, no images unless
+stated, body as a saved Portable Text array.
+
+| Case | Expected |
+| --- | --- |
+| Article, 2 words, metadata complete | 40 **Poor**, limit named, Body text length Failed |
+| Article, empty body array | 40 **Poor**, no keyword placement advice |
+| Article, 49 then 50 words with one link | 40 then at most 70 |
+| Article, 61 words, 3 sentences, no links, no keyword | At most 70 **Needs improvement**, Body text length Failed |
+| Article, 350 words, otherwise passing | At most 70 **Needs improvement**, Body text length Partly met |
+| Article, 600 words, keyword placed, link, alt, schema, fitting snippet | 100 **Good**, groups **All good** |
+| The same article with a featured image saved with empty alt | 100 **Good**, groups **All good** |
+| General, 2 words | Dash, **Too little text to score** |
+| General, 61 words, no links | Number shown, Internal links Partly met, short-text Suggestion, Heading structure not applicable |
+| Keyword never used, 600 words | 79 at most, three keyword rows Failed, phone visibility not applicable |
+| Known body under 100 words, phrase used 3 times | Repetition not applicable; no spam claim |
+| Known body of 100+ words, phrase above 3.5% with 3+ uses | Repetition Failed; factual count and percentage |
+| 3-word phrase 4 times in 300 words | Repetition Passed |
+| Configured profile, no keyword | Number with **No focus keyword**, **Add keyword** focuses the field |
+| Unconfigured Posts, 63 words, server analysis off | Automatic Article number at most 70; default named; optional profile choice; no writes or scan |
+| Unconfigured Pages or custom collection, 63 words | Automatic General number when evidence is complete; schema does not affect the choice |
+| Configured profile | Saved selection overrides the browser default |
+| Japanese 3000-character body | Word count from segments; not limited |
+| Custom blocks with a short paragraph | Body text length Not checked; dash |
+| Template body field | Dash, **Partially checked**; excluded from averages |
+| Too long for phones | Suggestion naming phones and the cut point, marked estimate |
+| Production browser checks | Same number and rows as the server for a default body |
+| Production browser checks, custom blocks with a short paragraph and no images | Same rows as the server; Image alt text not applicable, Body text length Not checked |
+| Group counts | Header equals the sum of group issues, suggestions, not checked |
+| Analyzer 21 or earlier stored result | **Earlier analyzer**, history kept, no current number or comparison |
+| Sandbox panel | Same groups, pills and band as the editor |
+
+The editor summary contains no weight table or partial point totals. A short
+scope note explains an incomplete score without suggesting that enabling
+automatic analysis or selecting a profile can make unsupported body blocks
+readable. The optional saved-analysis action belongs to Analysis options.
+
+Before acceptance, check keyboard use, light and dark themes and narrow width
+in the installed fixture. Documentation impact: architecture, README scoring
+and snippet guidance, CHANGELOG, operating cost (the first save or scan after
+upgrade re-analyzes each entry once and writes one score and one snapshot).

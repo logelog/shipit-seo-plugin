@@ -1,0 +1,1070 @@
+/*
+ * Workspace rebuild layer: styles for the react-query view containers,
+ * error containment, the contract-mismatch screen, the Redirects & 404s
+ * area, and the trend chart axis. Theming goes through Kumo variables with
+ * light fallbacks only — the host flips light/dark via color-scheme.
+ */
+
+/* ------------------------------------------------------------------ */
+/* View header (shared page-header pattern)                            */
+/* ------------------------------------------------------------------ */
+
+.shipit-seo-view-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+	min-width: 0;
+}
+
+.shipit-seo-view-header h2 {
+	margin: 0;
+	color: var(--text-color-kumo-strong, #111827);
+	font-size: 17px;
+	line-height: 24px;
+}
+
+.shipit-seo-view-header p {
+	margin: 3px 0 0;
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 13px;
+	line-height: 19px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Error containment card (render failures)                            */
+/* ------------------------------------------------------------------ */
+
+.shipit-seo-view-crash {
+	display: grid;
+	grid-template-columns: 34px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 12px;
+}
+
+.shipit-seo-view-crash__icon {
+	display: grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--text-color-kumo-danger, #c92a2a) 10%, var(--color-kumo-base, #fff));
+	color: var(--text-color-kumo-danger, #c92a2a);
+}
+
+.shipit-seo-view-crash strong {
+	display: block;
+	color: var(--text-color-kumo-strong, #111827);
+	font-size: 13px;
+	line-height: 19px;
+}
+
+.shipit-seo-view-crash p {
+	margin: 2px 0 0;
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 12px;
+	line-height: 18px;
+	overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------------ */
+/* Contract mismatch screen                                            */
+/* ------------------------------------------------------------------ */
+
+.shipit-seo-contract-mismatch {
+	display: grid;
+	justify-items: start;
+	gap: 12px;
+	max-width: 620px;
+	padding: 26px;
+}
+
+.shipit-seo-contract-mismatch__icon {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border-radius: 10px;
+	background: color-mix(in srgb, var(--text-color-kumo-warning, #a86700) 12%, var(--color-kumo-base, #fff));
+	color: var(--text-color-kumo-warning, #a86700);
+}
+
+.shipit-seo-contract-mismatch h2 {
+	margin: 0;
+	color: var(--text-color-kumo-strong, #111827);
+	font-size: 17px;
+	line-height: 24px;
+}
+
+.shipit-seo-contract-mismatch > p {
+	margin: 0;
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 13px;
+	line-height: 20px;
+}
+
+.shipit-seo-contract-mismatch__versions {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+	width: 100%;
+	margin: 0;
+	padding: 12px 14px;
+	border: 1px solid var(--color-kumo-line, #d9dce1);
+	border-radius: 8px;
+	background: var(--color-kumo-tint, #f7f8fa);
+}
+
+.shipit-seo-contract-mismatch__versions div {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+
+.shipit-seo-contract-mismatch__versions dt {
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+}
+
+.shipit-seo-contract-mismatch__versions dd {
+	margin: 0;
+	color: var(--text-color-kumo-strong, #111827);
+	font-size: 15px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	overflow-wrap: anywhere;
+}
+
+.shipit-seo-contract-mismatch__steps {
+	margin: 0;
+	padding-left: 18px;
+	color: var(--text-color-kumo-default, #20242c);
+	font-size: 13px;
+	line-height: 21px;
+}
+
+.shipit-seo-contract-mismatch__detail {
+	width: 100%;
+	min-width: 0;
+}
+
+.shipit-seo-contract-mismatch__detail summary {
+	color: var(--text-color-kumo-subtle, #667085);
+	cursor: pointer;
+	font-size: 12px;
+}
+
+.shipit-seo-contract-mismatch__detail code {
+	display: block;
+	margin-top: 6px;
+	padding: 10px 12px;
+	border: 1px solid var(--color-kumo-line, #d9dce1);
+	border-radius: 7px;
+	background: var(--color-kumo-tint, #f7f8fa);
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 11.5px;
+	line-height: 17px;
+	overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------------ */
+/* Disabled plugin notice                                              */
+/* ------------------------------------------------------------------ */
+
+.shipit-seo-plugin-disabled {
+	display: grid;
+	justify-items: start;
+	gap: 12px;
+	max-width: 620px;
+	padding: 26px;
+}
+
+.shipit-seo-plugin-disabled__icon {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border-radius: 10px;
+	background: var(--color-kumo-tint, #f7f8fa);
+	color: var(--text-color-kumo-subtle, #667085);
+}
+
+/* EmDash sets the strong text colour lighter than its default, so the title takes the default. */
+.shipit-seo-plugin-disabled h2 {
+	margin: 0;
+	color: var(--text-color-kumo-default, #20242c);
+	font-size: 17px;
+	line-height: 24px;
+	overflow-wrap: anywhere;
+}
+
+.shipit-seo-plugin-disabled > p {
+	margin: 0;
+	color: var(--text-color-kumo-default, #20242c);
+	font-size: 13px;
+	line-height: 20px;
+}
+
+.shipit-seo-plugin-disabled__action {
+	color: var(--text-color-kumo-link, #1769c2);
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.shipit-seo-plugin-disabled__action:hover {
+	text-decoration: underline;
+}
+
+.shipit-seo-plugin-disabled__action:focus-visible {
+	outline: 2px solid var(--text-color-kumo-link, #1769c2);
+	outline-offset: 2px;
+	border-radius: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Redirects & 404s area                                               */
+/* ------------------------------------------------------------------ */
+
+.shipit-seo-redirects-workspace {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 14px;
+	min-width: 0;
+}
+
+.shipit-seo-redirect-rules__note {
+	margin: 0;
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 13px;
+	line-height: 20px;
+}
+
+.shipit-seo-redirect-rules__note a {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	color: var(--text-color-kumo-link, #1769c2);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.shipit-seo-redirect-rules__note a:hover {
+	text-decoration: underline;
+}
+
+.shipit-seo-redirect-rules__source {
+	display: grid;
+	gap: 5px;
+	min-width: 0;
+}
+
+.shipit-seo-redirect-rules__source code,
+.shipit-seo-redirect-rules__destination {
+	font-size: 12.5px;
+	overflow-wrap: anywhere;
+}
+
+.shipit-seo-redirect-rules__flags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+}
+
+.shipit-seo-redirect-rules {
+	min-width: 0;
+}
+
+.shipit-seo-redirect-rules .shipit-seo-table-wrap {
+	margin-top: 14px;
+}
+
+.shipit-seo-redirect-rules tr[data-highlight="true"] > td {
+	background: color-mix(in srgb, var(--text-color-kumo-success, #087f5b) 8%, transparent);
+}
+
+.shipit-redirects-filters {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 10px;
+	margin-top: 14px;
+}
+
+.shipit-redirects-filters > :first-child {
+	flex: 1 1 240px;
+	min-width: 0;
+}
+
+.shipit-redirects-group {
+	padding: 1px 8px;
+	border: 1px solid var(--color-kumo-hairline, #e5e7eb);
+	border-radius: 999px;
+	background: var(--color-kumo-base, #fff);
+	color: var(--text-color-kumo-subtle, #667085);
+	font: inherit;
+	font-size: 12px;
+	line-height: 18px;
+	cursor: pointer;
+}
+
+.shipit-redirects-group:hover,
+.shipit-redirects-group:focus-visible {
+	color: var(--text-color-kumo-strong, #111827);
+	border-color: currentColor;
+}
+
+.shipit-redirects-pagination {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	margin-top: 12px;
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 13px;
+	line-height: 20px;
+}
+
+.shipit-redirects-pagination > div {
+	display: flex;
+	gap: 8px;
+}
+
+.shipit-redirects-dialog {
+	display: grid;
+	gap: 14px;
+	width: min(600px, calc(100vw - 32px));
+	max-width: min(600px, calc(100vw - 32px));
+	padding: 20px;
+}
+
+/* Kumo's dialog keeps a 32rem minimum width and hides overflow, so at narrow
+   widths or enlarged text the title and buttons would leave the viewport. */
+[role="dialog"].shipit-redirects-dialog {
+	min-width: 0;
+	max-height: calc(100dvh - 32px);
+	overflow-y: auto;
+}
+
+.shipit-redirects-dialog > h2 {
+	margin: 0;
+	font-size: 16px;
+	line-height: 24px;
+	font-weight: 600;
+	color: var(--text-color-kumo-strong, #111827);
+}
+
+.shipit-redirects-dialog > p,
+.shipit-redirects-hint,
+.shipit-redirects-result p {
+	margin: 0;
+	font-size: 13px;
+	line-height: 20px;
+}
+
+.shipit-redirects-form {
+	display: grid;
+	gap: 14px;
+	min-width: 0;
+}
+
+.shipit-redirects-form input {
+	font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.shipit-redirects-hint {
+	color: var(--text-color-kumo-subtle, #667085);
+}
+
+.shipit-redirects-hint code,
+.shipit-redirects-notice code,
+.shipit-redirects-record code {
+	overflow-wrap: anywhere;
+}
+
+.shipit-redirects-notice {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 12px 14px;
+	border-radius: 8px;
+	background: var(--color-kumo-banner-warning, #fef9c3);
+	color: var(--text-color-kumo-warning, #92400e);
+	font-size: 13px;
+	line-height: 20px;
+}
+
+.shipit-redirects-notice[data-tone="error"] {
+	background: color-mix(in srgb, var(--text-color-kumo-danger, #c92a2a) 10%, var(--color-kumo-base, #fff));
+	color: var(--text-color-kumo-danger, #c92a2a);
+}
+
+.shipit-redirects-notice > svg {
+	flex: none;
+	margin-top: 2px;
+}
+
+.shipit-redirects-notice > div {
+	display: grid;
+	gap: 4px;
+	min-width: 0;
+}
+
+.shipit-redirects-notice p {
+	margin: 0;
+	color: inherit;
+}
+
+.shipit-redirects-notice a,
+.shipit-redirects-links a {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	color: var(--text-color-kumo-link, #1769c2);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.shipit-redirects-notice a:hover,
+.shipit-redirects-links a:hover {
+	text-decoration: underline;
+}
+
+.shipit-redirects-result {
+	display: grid;
+	gap: 12px;
+}
+
+.shipit-redirects-result__title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--text-color-kumo-success, #087f5b);
+}
+
+.shipit-redirects-record {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 10px 16px;
+	margin: 0;
+	padding: 12px 14px;
+	border: 1px solid var(--color-kumo-hairline, #e5e7eb);
+	border-radius: 8px;
+}
+
+.shipit-redirects-record dt {
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 12px;
+	line-height: 18px;
+}
+
+.shipit-redirects-record dd {
+	margin: 0;
+	font-size: 13px;
+	line-height: 20px;
+}
+
+.shipit-redirects-links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	font-size: 13px;
+}
+
+.shipit-redirects-dialog__actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 8px;
+}
+
+/* The edit action lives in the source cell, the one column narrow layouts keep. */
+.shipit-redirects-row-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.shipit-redirects-row-action {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	color: var(--text-color-kumo-link, #1769c2);
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 18px;
+	text-decoration: none;
+}
+
+.shipit-redirects-row-action:hover,
+.shipit-redirects-row-action:focus-visible {
+	text-decoration: underline;
+}
+
+.shipit-redirects-notice[data-tone="info"] {
+	background: var(--color-kumo-tint, #f8f9fa);
+	color: var(--text-color-kumo-default, #1f2937);
+}
+
+.shipit-redirects-notice[data-tone="info"] > svg {
+	color: var(--text-color-kumo-subtle, #667085);
+}
+
+.shipit-redirects-current {
+	display: grid;
+	gap: 8px;
+	min-width: 0;
+}
+
+.shipit-redirects-current > h3 {
+	margin: 0;
+	font-size: 13px;
+	line-height: 20px;
+	font-weight: 600;
+	color: var(--text-color-kumo-strong, #111827);
+}
+
+/* Stored paths can run to 2,048 characters without a break opportunity, also
+   in plain text such as messages, field errors and links. */
+.shipit-redirects-dialog--edit,
+.shipit-redirects-summary {
+	overflow-wrap: anywhere;
+}
+
+.shipit-redirects-dialog--edit > *,
+.shipit-redirects-dialog--edit .shipit-redirects-links a {
+	min-width: 0;
+	max-width: 100%;
+}
+
+@media (max-width: 520px) {
+	.shipit-redirects-record {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+.shipit-forwarded-paths__notice {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 10px 12px;
+	margin-top: 14px;
+	padding: 12px 14px;
+	border: 1px solid var(--color-kumo-hairline, #e5e7eb);
+	border-radius: 8px;
+	background: var(--color-kumo-tint, #f8f9fa);
+	color: var(--text-color-kumo-default, #1f2937);
+	font-size: 13px;
+	line-height: 20px;
+}
+
+.shipit-forwarded-paths__notice > svg {
+	flex: none;
+	margin-top: 1px;
+	color: var(--text-color-kumo-subtle, #667085);
+}
+
+.shipit-forwarded-paths__notice > div {
+	flex: 1 1 260px;
+	min-width: 0;
+}
+
+.shipit-forwarded-paths__notice strong {
+	display: block;
+	font-weight: 600;
+}
+
+.shipit-forwarded-paths__notice p {
+	margin: 2px 0 0;
+	color: var(--text-color-kumo-subtle, #667085);
+}
+
+.shipit-forwarded-paths .shipit-seo-not-found-summary {
+	margin-top: 14px;
+}
+
+/* Retained core 404 records keep their metadata outside generic table rules. */
+.shipit-core-404,
+.shipit-core-404__content {
+	min-width: 0;
+}
+
+.shipit-core-404__content {
+	display: grid;
+	gap: 16px;
+	margin-top: 16px;
+}
+
+.shipit-core-404__note {
+	margin: 0;
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 13px;
+	line-height: 1.6;
+}
+
+.shipit-core-404__search,
+.shipit-core-404__paging,
+.shipit-core-404__summary-heading {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: end;
+	gap: 12px;
+}
+
+.shipit-core-404__search > :first-child {
+	flex: 1 1 240px;
+	min-width: 0;
+}
+
+.shipit-core-404__paging,
+.shipit-core-404__summary-heading {
+	align-items: center;
+	justify-content: space-between;
+}
+
+.shipit-core-404__paging > p {
+	margin: 0;
+	font-size: 13px;
+}
+
+.shipit-core-404__paging > div {
+	display: flex;
+	gap: 8px;
+}
+
+.shipit-core-404__summary-heading > p {
+	flex: 1 1 240px;
+}
+
+.shipit-core-404__rows {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	border: 1px solid var(--color-kumo-line, #d9dce1);
+	border-radius: 10px;
+}
+
+.shipit-core-404__rows > li {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px 20px;
+	padding: 14px 16px;
+}
+
+.shipit-core-404__rows > li + li {
+	border-top: 1px solid var(--color-kumo-line, #d9dce1);
+}
+
+.shipit-core-404__rows code {
+	flex: 1 1 240px;
+	min-width: 0;
+	overflow-wrap: anywhere;
+	white-space: normal;
+	font-family: inherit;
+	font-size: 14px;
+	line-height: 1.5;
+}
+
+.shipit-core-404__rows dl {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 20px;
+	margin: 0;
+	font-size: 13px;
+}
+
+.shipit-core-404__rows dt {
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 11px;
+}
+
+.shipit-core-404__rows dd {
+	margin: 2px 0 0;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Both full mode labels fit a small workspace only with tighter tab padding. */
+@container shipit-seo-workspace (max-width: 480px) {
+	.shipit-core-404__modes [role="tab"] {
+		padding-inline: 4px;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Trend chart axis                                                    */
+/* ------------------------------------------------------------------ */
+
+.shipit-seo-trend-plot-frame {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 10px;
+	margin-top: 18px;
+	min-width: 0;
+}
+
+.shipit-seo-trend-plot-frame .shipit-seo-trend-plot {
+	margin-top: 0;
+	padding-top: 0;
+}
+
+.shipit-seo-trend-plot-scale {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	justify-content: space-between;
+	margin: -6px 0;
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 10.5px;
+	font-variant-numeric: tabular-nums;
+	line-height: 12px;
+}
+
+.shipit-seo-trend-plot-area {
+	position: relative;
+	min-width: 0;
+}
+
+.shipit-seo-trend-plot-grid {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	grid-template-rows: repeat(4, 1fr) 0;
+	pointer-events: none;
+}
+
+.shipit-seo-trend-plot-grid span {
+	border-top: 1px dashed color-mix(in srgb, var(--color-kumo-line, #d9dce1) 70%, transparent);
+}
+
+.shipit-seo-trend-plot-area .shipit-seo-trend-plot {
+	position: relative;
+	z-index: 1;
+}
+
+/* ------------------------------------------------------------------ */
+/* Content health entry preview dialog                                 */
+/* ------------------------------------------------------------------ */
+
+.shipit-seo-content-preview-dialog {
+	max-width: min(680px, calc(100vw - 32px));
+}
+
+.shipit-seo-content-preview-dialog .shipit-seo-entry-preview {
+	max-height: min(58vh, 540px);
+	overflow: auto;
+	padding-right: 4px;
+}
+
+.shipit-seo-content-preview-dialog .shipit-seo-dialog-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 8px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Site verification                                                   */
+/* ------------------------------------------------------------------ */
+
+.shipit-seo-verification-page,
+.shipit-seo-verification-panel,
+.shipit-seo-verification-save,
+.shipit-seo-verification-card {
+	display: grid;
+	gap: 12px;
+	min-width: 0;
+}
+
+.shipit-seo-verification-page {
+	gap: 16px;
+}
+
+.shipit-seo-verification-providers {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px;
+	min-width: 0;
+}
+
+.shipit-seo-verification-card {
+	align-content: start;
+}
+
+.shipit-seo-verification-card h3 {
+	margin: 0;
+	color: var(--text-color-kumo-strong, #111827);
+	font-size: 15px;
+	line-height: 22px;
+}
+
+.shipit-seo-verification-copy,
+.shipit-seo-verification-note,
+.shipit-seo-verification-notes,
+.shipit-seo-verification-help li {
+	margin: 0;
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 13px;
+	line-height: 1.55;
+	overflow-wrap: anywhere;
+}
+
+.shipit-seo-verification-note {
+	padding: 8px 10px;
+	border-radius: 7px;
+	background: var(--color-kumo-tint, #f7f8fa);
+}
+
+.shipit-seo-verification-notes {
+	display: grid;
+	gap: 4px;
+	padding-left: 18px;
+}
+
+.shipit-seo-verification-field-actions,
+.shipit-seo-verification-links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 16px;
+	min-width: 0;
+}
+
+.shipit-seo-verification-field-actions {
+	gap: 8px;
+}
+
+.shipit-seo-verification-links {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: 13px;
+	line-height: 20px;
+}
+
+.shipit-seo-verification-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	color: var(--text-color-kumo-link, #1769c2);
+	font-size: 13px;
+	overflow-wrap: anywhere;
+}
+
+.shipit-seo-verification-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	min-width: 0;
+}
+
+.shipit-seo-verification-actions > p {
+	flex: 1 1 260px;
+}
+
+.shipit-seo-verification-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.shipit-seo-verification-tag summary,
+.shipit-seo-verification-help summary {
+	color: var(--text-color-kumo-default, #344054);
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.shipit-seo-verification-tag pre {
+	margin: 8px 0 0;
+	padding: 8px 10px;
+	border: 1px solid var(--color-kumo-hairline, #eaecf0);
+	border-radius: 7px;
+	background: var(--color-kumo-tint, #f7f8fa);
+	color: var(--text-color-kumo-default, #344054);
+	font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+	font-size: 12px;
+	line-height: 18px;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.shipit-seo-verification-help ul {
+	display: grid;
+	gap: 6px;
+	margin: 10px 0 0;
+	padding-left: 18px;
+}
+
+.shipit-seo-verification-link:focus-visible,
+.shipit-seo-verification-tag summary:focus-visible,
+.shipit-seo-verification-tag pre:focus-visible,
+.shipit-seo-verification-help summary:focus-visible {
+	outline: 2px solid var(--text-color-kumo-link, #1769c2);
+	outline-offset: 2px;
+	border-radius: 4px;
+}
+
+.shipit-seo-verification-host-note {
+	margin: 0;
+	color: var(--text-color-kumo-default, #344054);
+	font-size: 13px;
+	line-height: 1.55;
+	overflow-wrap: anywhere;
+}
+
+.shipit-seo-verification-live-tag {
+	display: grid;
+	gap: 4px;
+	min-width: 0;
+}
+
+.shipit-seo-verification-live-tag > span {
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.shipit-seo-verification-live-tag > code {
+	display: block;
+	padding: 8px 10px;
+	border: 1px solid var(--color-kumo-hairline, #eaecf0);
+	border-radius: 7px;
+	background: var(--color-kumo-tint, #f7f8fa);
+	color: var(--text-color-kumo-default, #344054);
+	font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+	font-size: 12px;
+	line-height: 18px;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+@container shipit-seo-workspace (max-width: 760px) {
+	.shipit-seo-verification-providers {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Responsive adjustments                                              */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 640px) {
+	.shipit-seo-view-crash {
+		grid-template-columns: 34px minmax(0, 1fr);
+	}
+
+	.shipit-seo-view-crash > button {
+		grid-column: 2;
+		justify-self: start;
+	}
+
+	.shipit-seo-contract-mismatch__versions {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/* Explicit analysis setup uses the same native form and status hierarchy. */
+.shipit-seo-analysis-activation__notice {
+  padding: 14px 16px;
+  border: 1px solid var(--color-kumo-line, #d9dce1);
+  border-radius: 8px;
+  background: var(--color-kumo-tint, #f7f8fa);
+}
+.shipit-seo-analysis-activation__notice p,
+.shipit-seo-assessment-profile p {
+  margin: 6px 0 0;
+  color: var(--text-color-kumo-subtle, #667085);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.shipit-seo-analysis-activation__actions,
+.shipit-seo-assessment-profile__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+.shipit-seo-analysis-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-block: 1px solid var(--color-kumo-line, #d9dce1);
+}
+.shipit-seo-analysis-status > div { display: grid; gap: 5px; }
+.shipit-seo-analysis-status span { color: var(--text-color-kumo-subtle, #667085); font-size: 13px; }
+.shipit-seo-analysis-status a { color: var(--text-color-kumo-link, #0055d4); font-size: 13px; }
+.shipit-seo-assessment-profile { min-width: 0; padding-block: 14px; }
+.shipit-seo-assessment-profile__heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.shipit-seo-assessment-profile__heading label { font-size: 13px; font-weight: 600; }
+.shipit-seo-assessment-profile__controls select {
+  flex: 1 1 160px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--color-kumo-line, #d9dce1);
+  border-radius: 6px;
+  background: var(--color-kumo-base, #fff);
+  color: var(--text-color-kumo-default, #20242c);
+  font: inherit;
+}
+
+/* Custom verification rows share the native verification card. */
+.shipit-seo-custom-verification__rows { display: grid; gap: 12px; margin-block: 16px; }
+.shipit-seo-custom-verification__row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; align-items: end; gap: 10px; }
+.shipit-seo-custom-verification__row label { display: grid; min-width: 0; gap: 5px; font-size: 13px; }
+.shipit-seo-custom-verification__row input { width: 100%; min-width: 0; }
+.shipit-seo-custom-verification__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-block: 14px; }
+.shipit-seo-custom-verification__actions > span { font-size: 13px; color: var(--text-color-kumo-subtle, #667085); }
+.shipit-seo-custom-verification__saved, .shipit-seo-custom-verification__review { margin-block: 16px; }
+.shipit-seo-custom-verification__saved summary { cursor: pointer; font-size: 13px; }
+.shipit-seo-custom-verification code { display: block; overflow-wrap: anywhere; white-space: pre-wrap; margin-block: 8px; font-size: 12px; }
+.shipit-seo-custom-verification__row > .shipit-seo-custom-verification__tag { grid-column: 1 / -1; margin-block: 0; color: var(--text-color-kumo-subtle, #667085); }
+@media (max-width: 640px) {
+  .shipit-seo-custom-verification__row { grid-template-columns: minmax(0, 1fr); }
+  .shipit-seo-custom-verification__row > button { justify-self: start; }
+}
+
+.shipit-seo-scan__selection-note {
+	margin: 0;
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 12px;
+	line-height: 18px;
+}
+
+.shipit-seo-scan__help {
+	border-top: 1px solid var(--color-kumo-line, #d9dce1);
+	padding-top: 12px;
+	color: var(--text-color-kumo-subtle, #667085);
+	font-size: 12px;
+	line-height: 18px;
+}
+
+.shipit-seo-scan__help summary {
+	width: fit-content;
+	color: var(--text-color-kumo-default, #20242c);
+	cursor: pointer;
+	font-weight: 500;
+}
+
+.shipit-seo-scan__help summary:focus-visible {
+	outline: 2px solid var(--text-color-kumo-link, #1769c2);
+	outline-offset: 3px;
+	border-radius: 3px;
+}
+
+.shipit-seo-scan__help > p {
+	margin: 10px 0 0;
+}

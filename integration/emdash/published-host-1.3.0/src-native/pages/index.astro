@@ -1,0 +1,30 @@
+---
+import { createPublicPageContext } from "emdash/page";
+import { EmDashHead, EmDashBodyStart, EmDashBodyEnd } from "emdash/ui";
+
+const page = createPublicPageContext({
+  Astro,
+  kind: "custom",
+  title: "Shipit SEO native candidate",
+  description: "Native Shipit SEO development on published EmDash 1.3.0.",
+  siteName: "Dev Site",
+});
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Shipit SEO native candidate</title>
+    <EmDashHead page={page} />
+  </head>
+  <body>
+    <EmDashBodyStart page={page} />
+    <main>
+      <h1>Dev Site</h1>
+      <p>Published EmDash 1.3.0 with the native Shipit SEO plugin.</p>
+      <p><a href="/_emdash/admin/plugins/shipit-seo/seo">Open Shipit SEO</a></p>
+    </main>
+    <EmDashBodyEnd page={page} />
+  </body>
+</html>

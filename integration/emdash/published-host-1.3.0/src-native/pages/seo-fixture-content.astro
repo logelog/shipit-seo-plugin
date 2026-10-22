@@ -1,0 +1,29 @@
+---
+import { createPublicPageContext } from "emdash/page";
+import { EmDashHead, EmDashBodyStart, EmDashBodyEnd } from "emdash/ui";
+
+const collection = Astro.url.searchParams.get("collection") === "posts" ? "posts" : "pages";
+const page = createPublicPageContext({
+  Astro,
+  kind: "content",
+  title: "SEO content fixture",
+  description: "A content page for checking which graph claims the primary schema.",
+  canonical: `https://example.test/seo-fixture-content/?collection=${collection}`,
+  siteName: "Shipit fixture",
+  siteUrl: "https://example.test/",
+  content: { collection, id: "seo-fixture-entry", slug: "seo-fixture-entry" },
+});
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SEO content fixture</title>
+    <EmDashHead page={page} />
+  </head>
+  <body>
+    <EmDashBodyStart page={page} />
+    <main><h1>SEO content fixture</h1></main>
+    <EmDashBodyEnd page={page} />
+  </body>
+</html>

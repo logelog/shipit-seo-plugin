@@ -1,0 +1,126 @@
+{
+  "name": "@shipitseo/emdash-plugin-seo",
+  "version": "0.4.0-beta.54",
+  "private": false,
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "description": "SEO metadata, structured data, indexing tools and content checks for native EmDash sites.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/logelog/shipit-seo-plugin.git",
+    "directory": "packages/emdash-plugin-seo"
+  },
+  "bugs": {
+    "url": "https://github.com/logelog/shipit-seo-plugin/issues"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts src/native-entry.ts src/sandbox-entry.ts src/admin-ui/admin.tsx src/admin-contract.ts src/sitemap-policy.ts src/locale-graph.ts src/taxonomy-archives.ts src/llms-txt.ts src/indexnow-astro.ts src/indexnow-integration.ts src/indexnow-route.ts src/astro.ts src/plugin-coexistence-metadata.ts src/plugin-coexistence-middleware-entry.ts src/sitemap-middleware-entry.ts src/llms-txt-middleware-entry.ts --out-dir dist --format esm --dts --platform neutral --external emdash --external emdash/plugin --external emdash/runtime --external virtual:shipit-seo/sitemap-owner --external virtual:shipit-seo/llms-txt-owner --external astro --external astro/zod --external node:fs --external node:module --external node:url --external @shipitseo/emdash-plugin-seo/admin-contract --clean && node scripts/link-admin-css.mjs",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "selfcheck": "node scripts/run-selfchecks.mjs",
+    "verify": "npm run check && npm run selfcheck && npm run build && npm run pack:check",
+    "pack:check": "node scripts/check-packed.mjs",
+    "prepack": "npm run build"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./plugin": {
+      "types": "./dist/native-entry.d.ts",
+      "default": "./dist/native-entry.js"
+    },
+    "./admin": {
+      "types": "./dist/admin-ui/admin.d.ts",
+      "default": "./dist/admin-ui/admin-entry.js"
+    },
+    "./sandbox": {
+      "types": "./dist/sandbox-entry.d.ts",
+      "default": "./dist/sandbox-entry.js"
+    },
+    "./admin-contract": {
+      "types": "./dist/admin-contract.d.ts",
+      "default": "./dist/admin-contract.js"
+    },
+    "./sitemap-policy": {
+      "types": "./dist/sitemap-policy.d.ts",
+      "default": "./dist/sitemap-policy.js"
+    },
+    "./locale-graph": {
+      "types": "./dist/locale-graph.d.ts",
+      "default": "./dist/locale-graph.js"
+    },
+    "./taxonomy-archives": {
+      "types": "./dist/taxonomy-archives.d.ts",
+      "default": "./dist/taxonomy-archives.js"
+    },
+    "./llms-txt": {
+      "types": "./dist/llms-txt.d.ts",
+      "default": "./dist/llms-txt.js"
+    },
+    "./indexnow-astro": {
+      "types": "./dist/indexnow-astro.d.ts",
+      "default": "./dist/indexnow-astro.js"
+    },
+    "./indexnow-integration": {
+      "types": "./dist/indexnow-integration.d.ts",
+      "default": "./dist/indexnow-integration.js"
+    },
+    "./indexnow-route": {
+      "types": "./dist/indexnow-route.d.ts",
+      "default": "./dist/indexnow-route.js"
+    },
+    "./astro": {
+      "types": "./dist/astro.d.ts",
+      "default": "./dist/astro.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "INSTALL-PROMPT.md",
+    "UPGRADE.md",
+    "UNINSTALL-PROMPT.md",
+    "THIRD-PARTY-NOTICES.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "@cloudflare/kumo": "2.6.0",
+    "@emdash-cms/admin": "1.3.0 || 1.3.1",
+    "@phosphor-icons/react": "^2.1.10",
+    "@tanstack/react-query": "^5.90.0",
+    "astro": "7.3.2",
+    "emdash": "1.3.0 || 1.3.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/kumo": "2.6.0",
+    "@emdash-cms/admin": "1.3.0",
+    "@phosphor-icons/react": "2.1.10",
+    "@tanstack/react-query": "5.90.21",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "astro": "7.3.2",
+    "emdash": "1.3.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tsdown": "0.20.3",
+    "typescript": "6.0.3"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "beta",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "keywords": [
+    "emdash",
+    "emdash-plugin",
+    "seo",
+    "schema",
+    "indexnow",
+    "astro"
+  ]
+}

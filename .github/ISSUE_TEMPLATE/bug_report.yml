@@ -1,0 +1,64 @@
+name: Bug report
+description: Report a reproducible problem in the plugin.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a suspected security vulnerability, use the private reporting route in [SECURITY.md](https://github.com/logelog/shipit-seo-plugin/blob/main/SECURITY.md).
+        Use synthetic content. Do not upload databases, sessions, customer exports, credentials or unredacted logs and screenshots.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the result you saw and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Give the smallest example, including relevant settings or synthetic content.
+      placeholder: |
+        1. Open ...
+        2. Change ...
+        3. Save ...
+        4. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Shipit SEO version
+      placeholder: 0.4.0-beta.54
+    validations:
+      required: true
+  - type: input
+    id: host-version
+    attributes:
+      label: EmDash and admin versions
+      description: Include both versions if they differ.
+      placeholder: EmDash 1.3.1 / admin 1.3.1
+    validations:
+      required: true
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Where did this happen?
+      options:
+        - Installed package
+        - Source development preview
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include Node version, OS, database, relevant enabled features and package manager. For UI issues, include browser/version, viewport width, admin language and content locale.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs or screenshots
+      description: Optional. Redact private details and include only evidence relevant to this problem.

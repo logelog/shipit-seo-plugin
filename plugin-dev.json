@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 1,
+  "name": "Shipit SEO native 1.3.0",
+  "host": {
+    "target": "native-1.3.0",
+    "format": "native",
+    "runner": "node",
+    "storage": "sqlite"
+  },
+  "dependencyRoot": "integration/emdash/published-host-1.3.0",
+  "expectedPackages": {
+    "emdash": "1.3.0",
+    "@emdash-cms/admin": "1.3.0",
+    "astro": "7.3.2"
+  },
+  "sourceDirectories": [
+    "packages/emdash-plugin-seo/src",
+    "packages/emdash-plugin-seo/scripts",
+    "scripts",
+    "tooling/plugin-dev",
+    "integration/emdash/published-host-1.3.0/src-native"
+  ],
+  "sourceFiles": [
+    "packages/emdash-plugin-seo/package.json",
+    "packages/emdash-plugin-seo/README.md",
+    "packages/emdash-plugin-seo/CHANGELOG.md",
+    "packages/emdash-plugin-seo/INSTALL-PROMPT.md",
+    "packages/emdash-plugin-seo/UNINSTALL-PROMPT.md",
+    "packages/emdash-plugin-seo/THIRD-PARTY-NOTICES.md",
+    "packages/emdash-plugin-seo/LICENSE",
+    "packages/emdash-plugin-seo/scripts/check-packed.mjs",
+    "integration/emdash/published-host-1.3.0/astro.native.config.mjs",
+    "integration/emdash/published-host-1.3.0/astro.native-admin.config.mjs",
+    "integration/emdash/published-host-1.3.0/package.json",
+    "integration/emdash/published-host-1.3.0/pnpm-workspace.yaml",
+    "package.json",
+    "README.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "AGENTS.md",
+    "CLA.md",
+    "LICENSE",
+    "packages/emdash-plugin-seo/UPGRADE.md",
+    "docs/releasing.md",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/ISSUE_TEMPLATE/config.yml",
+    "docs/architecture.md",
+    "scripts/check-translations.mjs",
+    "scripts/check-translations.test.mjs",
+    "scripts/check-public-files.mjs",
+    "scripts/check-public-files.test.mjs",
+    ".github/CODEOWNERS",
+    ".github/workflows/quality.yml",
+    "docs/ci/native-quick.yml.example",
+    "docs/ci/verify.yml.example",
+    "scripts/ci-quality.sh",
+    "scripts/ci-native-quick.sh",
+    ".github/ISSUE_TEMPLATE/bug_report.yml",
+    ".github/ISSUE_TEMPLATE/feature_request.yml",
+    ".github/ISSUE_TEMPLATE/translation.yml",
+    ".github/DISCUSSION_TEMPLATE/ideas.yml",
+    ".github/DISCUSSION_TEMPLATE/q-a.yml",
+    "CODE_OF_CONDUCT.md",
+    "SUPPORT.md",
+    "GOVERNANCE.md"
+  ],
+  "ports": [
+    {
+      "name": "Native EmDash preview",
+      "port": 4364
+    }
+  ],
+  "tasks": {
+    "setup": [
+      {
+        "label": "install-native-host",
+        "command": "pnpm",
+        "args": [
+          "install",
+          "--frozen-lockfile"
+        ],
+        "cwd": "integration/emdash/published-host-1.3.0"
+      }
+    ],
+    "quick": [
+      {
+        "label": "toolkit",
+        "command": "pnpm",
+        "args": [
+          "test:tooling"
+        ]
+      },
+      {
+        "label": "native-host",
+        "command": "node",
+        "args": [
+          "scripts/published-host/verify.mjs",
+          "--target",
+          "native-1.3.0",
+          "--quick"
+        ]
+      }
+    ],
+    "verify": [
+      {
+        "label": "toolkit",
+        "command": "pnpm",
+        "args": [
+          "test:tooling"
+        ]
+      },
+      {
+        "label": "native-host",
+        "command": "node",
+        "args": [
+          "scripts/published-host/verify.mjs",
+          "--target",
+          "native-1.3.0"
+        ]
+      },
+      {
+        "label": "internal-link-source-sqlite",
+        "command": "node",
+        "args": [
+          "scripts/published-host/internal-link-source-smoke.mjs",
+          "--target",
+          "native-1.3.0"
+        ]
+      },
+      {
+        "label": "internal-link-target-sqlite",
+        "command": "node",
+        "args": [
+          "scripts/published-host/internal-link-target-smoke.mjs",
+          "--target",
+          "native-1.3.0"
+        ]
+      },
+      {
+        "label": "internal-link-routes-sqlite",
+        "command": "node",
+        "args": [
+          "scripts/published-host/internal-link-routes-smoke.mjs",
+          "--target",
+          "native-1.3.0"
+        ]
+      }
+    ],
+    "refresh": [
+      {
+        "label": "runtime-package-refresh",
+        "command": "node",
+        "args": [
+          "--import=./scripts/published-host/host-loader.mjs",
+          "scripts/published-host/build-package.mjs",
+          "--runtime-only"
+        ],
+        "timeoutMs": 180000
+      }
+    ],
+    "dev": [
+      {
+        "label": "preview",
+        "command": "node",
+        "args": [
+          "scripts/published-host/dev.mjs",
+          "--target",
+          "native-1.3.0"
+        ],
+        "timeoutMs": 43200000
+      }
+    ],
+    "dev-engine": [
+      {
+        "label": "engine-runtime-refresh",
+        "command": "node",
+        "args": [
+          "--import=./scripts/published-host/host-loader.mjs",
+          "scripts/published-host/build-package.mjs",
+          "--runtime-only"
+        ],
+        "timeoutMs": 180000
+      },
+      {
+        "label": "engine-preview",
+        "command": "node",
+        "args": [
+          "scripts/published-host/dev.mjs",
+          "--target",
+          "native-1.3.0"
+        ],
+        "timeoutMs": 43200000
+      }
+    ],
+    "dev-admin": [
+      {
+        "label": "admin-runtime-refresh",
+        "command": "node",
+        "args": [
+          "--import=./scripts/published-host/host-loader.mjs",
+          "scripts/published-host/build-package.mjs",
+          "--runtime-only"
+        ],
+        "timeoutMs": 180000
+      },
+      {
+        "label": "admin-source-preview",
+        "command": "node",
+        "args": [
+          "--import=./scripts/published-host/host-loader.mjs",
+          "scripts/published-host/dev-admin.mjs",
+          "--target",
+          "native-1.3.0"
+        ],
+        "timeoutMs": 43200000
+      }
+    ]
+  },
+  "preflight": {
+    "dev-engine": {
+      "installedPins": true,
+      "files": [
+        "scripts/published-host/dev.mjs",
+        "scripts/published-host/serve.mjs",
+        "scripts/published-host/build-package.mjs",
+        "scripts/published-host/host-loader.mjs",
+        "integration/emdash/published-host-1.3.0/astro.native.config.mjs",
+        "integration/emdash/published-host-1.3.0/src-native/middleware.ts",
+        "integration/emdash/published-host-1.3.0/src-native/live.config.ts",
+        "packages/emdash-plugin-seo/package.json"
+      ]
+    },
+    "dev-admin": {
+      "installedPins": true,
+      "files": [
+        "scripts/published-host/dev-admin.mjs",
+        "scripts/published-host/build-package.mjs",
+        "integration/emdash/published-host-1.3.0/astro.native.config.mjs",
+        "integration/emdash/published-host-1.3.0/astro.native-admin.config.mjs",
+        "packages/emdash-plugin-seo/package.json",
+        "packages/emdash-plugin-seo/src/admin-ui/admin.tsx",
+        "packages/emdash-plugin-seo/src/admin-ui/admin.css",
+        "packages/emdash-plugin-seo/src/admin-ui/workspace.css",
+        "packages/emdash-plugin-seo/src/admin-ui/content-editor.css"
+      ]
+    }
+  },
+  "targets": {
+    "native-1.3.0": {}
+  }
+}

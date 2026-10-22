@@ -1,0 +1,21 @@
+title: "[Idea]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Start with the user problem. A discussion can help decide whether an idea should become an issue or pull request.
+        Keep private site data and credentials out of examples.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would this help you do?
+      description: Describe a concrete workflow and who would use it.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: How could it work?
+      description: Sketch the behavior and mention alternatives, permissions, data handling or operating costs.
+    validations:
+      required: true
