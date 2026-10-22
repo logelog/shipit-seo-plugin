@@ -410,7 +410,7 @@ check(
 	shortDepth?.basis === "measured" && shortDepth.status === "fail" && shortDepth.weight === 10 &&
 		shortDepth.evidence.actual === 63 && severelyThinPost.metrics.wordCount === 63 &&
 		JSON.stringify(severelyThinPost.calculation.limit) === JSON.stringify({ reason: "thin-content", cap: 70, checkIds: ["content-depth"] }) &&
-		severelyThinPost.score <= 70 && /Google sets no minimum word count/.test(shortDepth.detail),
+		severelyThinPost.score <= 70 && /This checklist suggests at least 600 words for articles/.test(shortDepth.detail),
 	JSON.stringify(shortDepth),
 );
 
@@ -711,7 +711,7 @@ check(
 	"an article body of 300 to 599 words partly meets Body text length and is limited to 70",
 	nearTargetDepth.checks.some((item) => item.id === "content-depth" && item.status === "review" && item.weight === 10 &&
 		item.evidence.actual === 360 && item.evidence.actual === nearTargetDepth.metrics.wordCount &&
-		item.evidence.expected === "600 or more words of body text (checklist guideline)" && /Google sets no word count/.test(item.limitation)) &&
+		item.evidence.expected === "600 or more words of body text (checklist guideline)" && /Word targets are checklist guidelines/.test(item.limitation)) &&
 		nearTargetDepth.calculation.limit?.reason === "thin-content" && nearTargetDepth.calculation.limit.cap === 70 && nearTargetDepth.score <= 70,
 );
 

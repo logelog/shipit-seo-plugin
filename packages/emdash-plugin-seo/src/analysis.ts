@@ -1194,7 +1194,7 @@ function contentDepthStatus(words: number, article: boolean): SeoCheckStatus {
 
 function contentDepthCheck(signals: SeoDocumentSignals, input: SeoAnalysisInput, article: boolean): SeoContentCheck {
 	const label = "Body text length";
-	const limitation = "Counts words in the saved body only; text the site template adds is not observed. Word targets are checklist guidelines; Google sets no word count.";
+	const limitation = "Counts words in the saved body only; text the site template adds is not observed. Word targets are checklist guidelines.";
 	const expected = article
 		? "600 or more words of body text (checklist guideline)"
 		: "100 or more words of body text (checklist guideline; not scored for general content)";
@@ -1213,9 +1213,7 @@ function contentDepthCheck(signals: SeoDocumentSignals, input: SeoAnalysisInput,
 		: words === 0
 			? "No body text was found."
 			: article
-				? status === "review"
-					? `Body text: ${count}. This checklist suggests at least 600 words for articles. Google sets no minimum word count, so add text only where it helps readers.`
-					: `Body text: ${count}. This checklist suggests at least 600 words for articles, and fewer than 600 limits the score. Google sets no minimum word count.`
+				? `Body text: ${count}. This checklist suggests at least 600 words for articles.`
 				: `Short body text: ${count}. Short pages such as contact or product pages can be fine. Only text saved in this entry's body is counted.`;
 	return { id: "content-depth", label, category: "content", severity: article ? "medium" : "info", status, weight: article ? 10 : 0, basis: "measured",
 		detail, evidence: { actual: words, expected, source: "saved body text" }, limitation,
