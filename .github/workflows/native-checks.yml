@@ -1,0 +1,170 @@
+name: Native checks
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Optional reviewed source commit; blank uses this workflow run commit
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-checks-manual
+  cancel-in-progress: false
+
+jobs:
+  native:
+    name: Current native types and selfchecks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ASTRO_TELEMETRY_DISABLED: "1"
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+      COREPACK_ENV_FILE: "0"
+      COREPACK_NPM_REGISTRY: "https://registry.npmjs.org"
+      NPM_CONFIG_REGISTRY: "https://registry.npmjs.org/"
+      NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/shipit-native-config/user.npmrc
+      NPM_CONFIG_GLOBALCONFIG: ${{ runner.temp }}/shipit-native-config/global.npmrc
+      NPM_CONFIG_FETCH_RETRIES: "0"
+      NPM_CONFIG_FETCH_TIMEOUT: "60000"
+      NPM_CONFIG_AUDIT: "false"
+      NPM_CONFIG_FUND: "false"
+      NPM_CONFIG_UPDATE_NOTIFIER: "false"
+      EXPECTED_POLICY_SHA256: "9f25e8d7e5347320ba962b47aba4b164b25d145748e3b373d0324298abb3c2fb"
+      EXPECTED_API_SHA256: "2a5560ccb6f99bb9b163bfaa2f81c484b4f8fd6ed1484edecec1e102448c6a6a"
+      EXPECTED_QUICK_HELPER_SHA256: "ccbd36051644d27d1fd2e30445300d22167797d191c4661008e39ecf9d6c218e"
+      EXPECTED_NODE_PIN_SHA256: "7e8a2fa94951112b894a3dbe3d05efef5e9263741fa49125f0a70f40fedab4cc"
+      EXPECTED_ROOT_MANIFEST_SHA256: "952589859d978e1785e12f72144defafc68cd34e8231ad8a860e1519a4573e72"
+      EXPECTED_FIXTURE_MANIFEST_SHA256: "ca0ecbe8a22a5e28d44c4bac88b5e5e2be3a6d8c4db71b5a3a39a25d49bc755f"
+      EXPECTED_FIXTURE_WORKSPACE_SHA256: "de2f26f735aa145a3689755a114eb9036d7fce9bf7910923c80c6cc7e55111c5"
+    steps:
+      - name: Resolve reviewed source
+        id: source
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          source_ref="$SOURCE_REF"
+          if [[ -z "$source_ref" ]]; then source_ref="$WORKFLOW_SHA"; fi
+          [[ "$source_ref" =~ ^[0-9a-f]{40}$ ]]
+          printf 'sha=%s\n' "$source_ref" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ steps.source.outputs.sha }}
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
+
+      - name: Check reviewed source and policy entry points
+        env:
+          SOURCE_REF: ${{ steps.source.outputs.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_REF"
+          find . \( -name .npmrc -o -name .corepack.env \) \( -type f -o -type l \) -print \
+            > "$RUNNER_TEMP/shipit-native-package-config-files.txt"
+          if [[ -s "$RUNNER_TEMP/shipit-native-package-config-files.txt" ]]; then
+            echo "Unreviewed repository .npmrc or .corepack.env configuration is not allowed." >&2
+            exit 1
+          fi
+          for expected in "$EXPECTED_POLICY_SHA256" "$EXPECTED_API_SHA256" \
+            "$EXPECTED_QUICK_HELPER_SHA256" "$EXPECTED_NODE_PIN_SHA256" \
+            "$EXPECTED_ROOT_MANIFEST_SHA256" "$EXPECTED_FIXTURE_MANIFEST_SHA256" \
+            "$EXPECTED_FIXTURE_WORKSPACE_SHA256"; do
+            [[ "$expected" =~ ^[0-9a-f]{64}$ ]] || {
+              echo "Final reviewed hashes are required before this workflow can run."
+              exit 1
+            }
+          done
+          printf '%s  %s\n' \
+            "$EXPECTED_POLICY_SHA256" compatibility.json \
+            "$EXPECTED_API_SHA256" scripts/compatibility.mjs \
+            "$EXPECTED_QUICK_HELPER_SHA256" scripts/ci-native-quick.sh \
+            "$EXPECTED_NODE_PIN_SHA256" .node-version \
+            "$EXPECTED_ROOT_MANIFEST_SHA256" package.json \
+            | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/shipit-native-config"
+          : > "$NPM_CONFIG_USERCONFIG"
+          : > "$NPM_CONFIG_GLOBALCONFIG"
+
+      - name: Set up the generated Node pin
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version-file: .node-version
+          check-latest: false
+          package-manager-cache: false
+
+      - name: Read and verify the current compatibility target
+        id: target
+        run: |
+          node scripts/compatibility.mjs --ci-json > "$RUNNER_TEMP/shipit-native-config/target.json"
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { appendFileSync, readFileSync } from "node:fs";
+          import { createHash } from "node:crypto";
+          import path from "node:path";
+          const read = file => JSON.parse(readFileSync(file, "utf8"));
+          const sha = file => createHash("sha256").update(readFileSync(file)).digest("hex");
+          const meta = read(path.join(process.env.RUNNER_TEMP, "shipit-native-config/target.json"));
+          const exactVersion = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+          const exactHash = /^[0-9a-f]{64}$/;
+          for (const value of [meta.toolchain.node, meta.toolchain.pnpm, meta.toolchain.astro,
+            meta.packages.emdash, meta.packages["@emdash-cms/admin"]]) assert.match(value, exactVersion);
+          assert.equal(meta.target, "native-" + meta.packages.emdash);
+          assert.equal(meta.dependencyRoot, "integration/emdash/published-host-" + meta.packages.emdash);
+          assert.match(meta.reviewedLockSha256, exactHash);
+          assert.equal(process.versions.node, meta.toolchain.node);
+          assert.equal(readFileSync(".node-version", "utf8").trim(), meta.toolchain.node);
+          assert.equal(readFileSync(".nvmrc", "utf8").trim(), meta.toolchain.node);
+          assert.equal(read("package.json").packageManager, "pnpm@" + meta.toolchain.pnpm);
+          const fixture = meta.dependencyRoot;
+          assert.equal(sha(path.join(fixture, "package.json")), process.env.EXPECTED_FIXTURE_MANIFEST_SHA256);
+          assert.equal(sha(path.join(fixture, "pnpm-workspace.yaml")), process.env.EXPECTED_FIXTURE_WORKSPACE_SHA256);
+          assert.equal(sha(path.join(fixture, "pnpm-lock.yaml")), meta.reviewedLockSha256);
+          const manifest = read(path.join(fixture, "package.json"));
+          for (const [name, value] of Object.entries(meta.packages)) {
+            assert.equal(manifest.dependencies[name], value, name);
+          }
+          assert.equal(manifest.packageManager, "pnpm@" + meta.toolchain.pnpm);
+          appendFileSync(process.env.GITHUB_OUTPUT, [
+            "target=" + meta.target,
+            "dependency_root=" + fixture,
+            "node=" + meta.toolchain.node,
+            "pnpm=" + meta.toolchain.pnpm,
+            "lock_sha256=" + meta.reviewedLockSha256,
+            "",
+          ].join("\n"));
+          console.log("Reviewed target: " + meta.target + "; Node " + meta.toolchain.node + "; pnpm " + meta.toolchain.pnpm);
+          NODE
+
+      - name: Prepare the policy package manager
+        env:
+          PNPM_VERSION: ${{ steps.target.outputs.pnpm }}
+        run: |
+          [[ "$PNPM_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          corepack enable
+          corepack prepare "pnpm@$PNPM_VERSION" --activate
+          test "$(pnpm --version)" = "$PNPM_VERSION"
+
+      - name: Install the reviewed current fixture
+        env:
+          COREPACK_ENABLE_NETWORK: "0"
+          DEPENDENCY_ROOT: ${{ steps.target.outputs.dependency_root }}
+        run: |
+          [[ "$DEPENDENCY_ROOT" =~ ^integration/emdash/published-host-[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          pnpm --dir "$DEPENDENCY_ROOT" install \
+            --frozen-lockfile --trust-lockfile --ignore-scripts --ignore-pnpmfile \
+            --no-runtime --fetch-retries=0 --fetch-timeout=60000 \
+            --network-concurrency=1 --child-concurrency=1 \
+            --registry=https://registry.npmjs.org/ \
+            --store-dir="$RUNNER_TEMP/shipit-native-pnpm-store" \
+            --cache-dir="$RUNNER_TEMP/shipit-native-pnpm-cache"
+
+      - name: Check types and selfchecks on loopback only
+        env:
+          COREPACK_ENABLE_NETWORK: "0"
+        run: bash scripts/ci-native-quick.sh

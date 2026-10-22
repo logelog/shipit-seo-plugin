@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { childEnvironment, createEnvironment, parseOptions, readManifest, sourceRoot } from "./environment.mjs";
+import { assertVerificationMode, childEnvironment, createEnvironment, parseOptions, readManifest, sourceRoot } from "./environment.mjs";
 import { prepareTypes } from "./prepare-types.mjs";
 
 const options = parseOptions(process.argv.slice(2));
+assertVerificationMode(options.target, options.quick ? "quick" : "full");
 const [major, minor] = process.versions.node.split(".").map(Number);
 if (major !== 24 || minor < 19) throw new Error("Use Node >=24.19.0 <25 for published-host verification");
 const environment = createEnvironment(options.hostPath ?? fileURLToPath(options.target.fixtureRoot), options.target);

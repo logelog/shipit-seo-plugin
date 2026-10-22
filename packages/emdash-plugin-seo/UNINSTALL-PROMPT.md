@@ -1,9 +1,14 @@
 # Remove Shipit SEO while keeping its data
 
 Copy the request below into your site's development task. It covers the native
-Shipit SEO installation on EmDash and admin 1.3.0 or 1.3.1 with Node and SQLite. Start
+Shipit SEO installation. Start
 with an isolated copy; this request does not authorize production removal,
 deployment, data deletion or IndexNow submission.
+
+<!-- compatibility:support:start -->
+Native EmDash/admin support: **1.3.1 or 1.3.0**.
+Use Node **24.19.0**, Astro **7.3.2** and SQLite.
+<!-- compatibility:support:end -->
 
 ```text
 Remove @shipitseo/emdash-plugin-seo from this isolated site copy while keeping
@@ -12,8 +17,8 @@ Verify the resulting admin and public output.
 
 First inspect the repository's instructions, installed package versions,
 manifest/lockfile, Astro configuration, EmDash setup and public templates.
-This guide covers native EmDash and @emdash-cms/admin 1.3.0 or 1.3.1 on Node with
-SQLite. Report a different host/runtime/database before changing it. Do not
+Check the installed package's native host/runtime requirements. Report a
+different host/runtime/database before changing it. Do not
 upgrade EmDash or use a registry plugin's Uninstall or Delete data flow for
 this native npm installation.
 

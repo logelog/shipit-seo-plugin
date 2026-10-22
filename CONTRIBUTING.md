@@ -4,10 +4,18 @@ Bug fixes, tests, documentation and translations are welcome. Read the
 [community conduct guide](CODE_OF_CONDUCT.md) and use Discussions for questions
 or ideas that are not ready for an issue.
 
-The default development target is native EmDash and admin 1.3.0 with Astro
-7.3.2, Node 24.19.0, pnpm 11.19.0 and SQLite. This beta also supports the
-published EmDash and admin 1.3.1 packages on Node with SQLite. Other runtimes
-and databases need separate acceptance evidence.
+<!-- compatibility:development:start -->
+The default development target is **native-1.3.1** (EmDash/admin 1.3.1).
+Use Node **24.19.0**, pnpm **11.19.0**, Astro **7.3.2** and SQLite.
+The fixture is `integration/emdash/published-host-1.3.1`; its preview is
+`http://127.0.0.1:4365/_emdash/admin`.
+
+Retained native targets: `native-1.3.0`.
+The current target implements quick verification; full verification is not implemented for this target.
+<!-- compatibility:development:end -->
+
+See [compatibility and target upgrades](docs/compatibility.md) for the policy,
+available verification modes and how to change a target without stale pins.
 
 ## Choose a contribution
 
@@ -42,7 +50,7 @@ pnpm dev:doctor
 pnpm verify:quick
 ~~~
 
-The default fixture uses the pinned EmDash 1.3.0 dependency graph. Keep its
+The default fixture uses the current target's pinned dependency graph. Keep its
 lockfile unchanged unless your contribution updates dependencies. No Cloudflare
 account, production database or EmDash source checkout is needed.
 
@@ -93,11 +101,13 @@ admin selfchecks directly under `packages/emdash-plugin-seo/src/admin-ui/`.
 A new nested selfcheck is not picked up automatically; place it beside the
 relevant checks in those directories or update the runner explicitly.
 
-Before submitting a product change, run:
+Before submitting a product change, select a target that implements full
+verification from [the compatibility table](docs/compatibility.md). Replace
+`TARGET` with that same exact target in both commands:
 
 ~~~sh
-pnpm verify
-pnpm dev:report
+pnpm verify --target TARGET
+pnpm dev:report --target TARGET
 ~~~
 
 The report records the selected graph, check results and whether the source
@@ -174,7 +184,8 @@ Choose a descriptive branch name, such as `fix/search-preview` or
 regression check for changed behavior and update the affected guidance. Keep
 generated output and local state out of the commit.
 
-Complete the relevant checks above. Product changes need `pnpm verify`;
+Complete the relevant checks above. Product changes need full verification on
+an implemented target and relevant acceptance on the intended supported host;
 language-only changes can use the catalogue checks without installing the host.
 For documentation, check links and commands against the implementation.
 

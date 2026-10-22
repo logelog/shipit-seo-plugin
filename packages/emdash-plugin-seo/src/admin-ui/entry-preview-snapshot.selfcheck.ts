@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import * as contract from "../admin-contract.ts";
 import { createSavedContentSnapshot, savedContentVersion, type SavedContentSnapshot } from "./saved-content-snapshot.ts";
 
 const requireSource = createRequire(import.meta.url);
-const requireHost = createRequire(new URL("../../../../integration/emdash/published-host-1.3.0/package.json", import.meta.url));
-let ts: typeof import("typescript");
-try { ts = requireSource("typescript"); }
-catch { ts = requireHost("typescript"); }
+const selectedHost = process.env.SHIPIT_PUBLISHED_HOST;
+assert.ok(selectedHost && isAbsolute(selectedHost), "Run this check through the selected published host.");
+const requireHost = createRequire(pathToFileURL(join(selectedHost, "package.json")));
+const ts: typeof import("typescript") = requireHost("typescript");
 
 // Use the installed host's response parser without loading its editor components.
 const hostEntry = requireHost.resolve("@emdash-cms/admin");

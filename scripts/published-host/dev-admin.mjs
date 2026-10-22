@@ -5,11 +5,12 @@
 // refreshes the runtime package once and holds the development lock.
 import { fileURLToPath } from "node:url";
 import { createEnvironment, runtimeExport } from "./environment.mjs";
+import { readCompatibility } from "../compatibility.mjs";
 
-const supportedNativeTargets = new Set(["native-1.1.0", "native-1.2.0", "native-1.3.0"]);
+const supportedNativeTargets = new Set(Object.keys(readCompatibility().targets));
 const args = process.argv.slice(2);
 if (args.length !== 2 || args[0] !== "--target" || !supportedNativeTargets.has(args[1])) {
-  throw new Error("Usage: node ./tooling/plugin-dev/cli.mjs dev-admin --target native-1.1.0|native-1.2.0|native-1.3.0");
+  throw new Error("Usage: node ./tooling/plugin-dev/cli.mjs dev-admin --target " + [...supportedNativeTargets].join("|"));
 }
 if (process.env.SHIPIT_HOST_TARGET !== args[1] || !process.env.SHIPIT_PUBLISHED_HOST) {
   throw new Error("Start the admin source preview through the toolkit so the native host and lock are selected.");

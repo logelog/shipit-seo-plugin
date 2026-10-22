@@ -6,6 +6,15 @@ Existing results for a provisional archive must not be assigned to a new one.
 
 ## Version and compatibility
 
+<!-- compatibility:support:start -->
+Native EmDash/admin support: **1.3.1 or 1.3.0**.
+Use Node **24.19.0**, Astro **7.3.2** and SQLite.
+<!-- compatibility:support:end -->
+
+Update [compatibility.json](../compatibility.json), synchronize its current
+documentation and check the derived pins as described in
+[compatibility.md](compatibility.md). A declaration does not establish acceptance.
+
 - Record the proposed version, immutable reviewed commit and clean source state.
   Never reuse a published version for changed bytes.
 - During `0.x` and beta development, describe breaking behavior and storage
@@ -13,10 +22,8 @@ Existing results for a provisional archive must not be assigned to a new one.
   For a future stable series, use major versions for breaking changes, minor
   versions for compatible additions and patches for compatible fixes.
 - List qualified EmDash/admin, Astro, Node and database versions, tested update
-  pairs, any required manual steps and downgrade limits. The beta supports
-  EmDash/admin 1.3.0 and 1.3.1, Astro 7.3.2 and Node 24.19.0 with SQLite.
-  The default development fixture remains pinned to 1.3.0; retain separate
-  installed-package evidence for 1.3.1.
+  pairs, any required manual steps and downgrade limits. Retain separate
+  installed-package evidence for every declared supported target.
 - Keep data retention the default. A release must not silently reset indexing,
   purge records, enable optional work or treat an export as a database backup.
 - Use `beta` only for reviewed prereleases. A channel label can move; customer
@@ -114,7 +121,7 @@ needs source, tests and contributor tools; the npm archive uses the package's
 
 - Prepare the public tree from a reviewed snapshot in a separate, empty staging
   directory. Copy only the reviewed root files and `.github`, `docs`,
-  `packages/emdash-plugin-seo`, `integration/emdash/published-host-1.3.0`,
+  `packages/emdash-plugin-seo`, the fixtures selected by `compatibility.json`,
   `scripts` and `tooling/plugin-dev`. Include the pinned manifests and lockfiles
   needed for those paths. Any added target needs its own reviewed file list.
 - Do not copy the private checkout's `.git` directory, history, refs, remotes,

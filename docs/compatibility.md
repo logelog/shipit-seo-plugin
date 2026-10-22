@@ -1,0 +1,57 @@
+# Compatibility and target upgrades
+
+[compatibility.json](../compatibility.json) owns current and retained host
+targets, the development toolchain and each reviewed fixture lock hash.
+The product release version stays in `packages/emdash-plugin-seo/package.json`;
+changing a host target does not rename the product or its analyzer.
+
+<!-- compatibility:matrix:start -->
+| Target | Role | EmDash | Admin | Implemented verification |
+| --- | --- | --- | --- | --- |
+| `native-1.3.1` | Current | 1.3.1 | 1.3.1 | quick |
+| `native-1.3.0` | Retained | 1.3.0 | 1.3.0 | quick, full |
+
+Pinned toolchain: Node **24.19.0**, pnpm **11.19.0**, Astro **7.3.2**; native Node/SQLite only.
+
+`pnpm verify:quick` selects `native-1.3.1`.
+Full verification is available with `pnpm verify --target native-1.3.0` and its prepared offline npm cache.
+Read that target's report with `pnpm dev:report --target native-1.3.0`.
+A mode listed here describes the runner, not a passing test or release acceptance.
+<!-- compatibility:matrix:end -->
+
+## Change a target
+
+1. Add a separate fixture with its exact manifest and lockfile. Review the
+   dependency graph and record its SHA-256 in `compatibility.json`. A null hash
+   means pending review and is refused by CI metadata checks.
+2. Add the target's exact EmDash/admin versions, fixture path, port and implemented
+   verification modes. Keep existing fixture directories and their data separate.
+   A new target must refuse a mode until the required checks are implemented;
+   skipping those checks is not a successful verification.
+3. Select the new `currentTarget`. Retain older supported targets explicitly in
+   `retainedTargets`, or remove support as an intentional release decision.
+4. Run `pnpm sync:compatibility` and `pnpm check:compatibility`. Review the resulting
+   manifest, Node pins and current documentation. The synchronizer does not
+   install dependencies, fetch a release or change fixture manifests, lockfiles,
+   existing site data, changelog history or acceptance receipts.
+5. Run the implemented checks and install the exact candidate archive in a
+   separate acceptance environment. Preserve the source/target/archive identity.
+   Declaring support or matching a lock hash does not establish that these
+   checks passed.
+
+If the package version has already been published, changed package bytes need
+a new version. Review changes to peer ranges, runtime behavior, storage,
+installation and recovery before publication; see [releasing.md](releasing.md).
+
+## Check for drift
+
+`pnpm check:compatibility` compares managed documentation, package peers and
+development pins, Node/package-manager settings, fixture manifests and reviewed
+lock hashes with the policy. It also checks development and runtime target
+selection. It runs locally without dependency installation or network access.
+
+`pnpm sync:compatibility` updates only the named current documentation blocks
+and derived package/toolchain fields. The blocks use `compatibility` markers;
+edit the policy instead of those blocks. Keep current compatibility statements
+there or link to this page. Historical release notes, version-specific examples,
+retained fixture pins and earlier acceptance records keep their original values.

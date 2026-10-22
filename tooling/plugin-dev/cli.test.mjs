@@ -6,9 +6,11 @@ import path from "node:path";
 import { test } from "node:test";
 import { createServer } from "node:net";
 import { fileURLToPath } from "node:url";
+import { readCompatibility } from "../../scripts/compatibility.mjs";
 import { acquireLock, checkDependencies, checkInstalledPins, childHostEnvironment, cleanReports, ensureReports, main, parseTargetArgs, previewStatus, readConfig, readNotRun, readRecordedReport, repoPath, reportLabel, runTasks, sourceFingerprint, writeReportJson } from "./cli.mjs";
 
 const repository = fileURLToPath(new URL("../../", import.meta.url));
+const compatibility = readCompatibility(repository);
 
 function fixture(t) {
   const root = mkdtempSync(path.join(os.tmpdir(), "plugin-dev-test-"));
@@ -652,43 +654,50 @@ function assertUntouched(root, marker, lock) {
   assert.equal(existsSync(lock), false, "the lock is released");
 }
 
-test("admin source preview selects the canonical native host by default", async () => {
+test("admin source preview selects the current native host by default", async () => {
   const normal = readConfig(repository);
-  const native = readConfig(repository, "native-1.3.0");
-  assert.equal(normal.host.target, "native-1.3.0");
-  assert.deepEqual(normal.tasks["dev-admin"], native.tasks["dev-admin"]);
+  assert.equal(normal.host.target, compatibility.currentTarget);
+  assert.deepEqual(normal.tasks["dev-admin"], readConfig(repository, compatibility.currentTarget).tasks["dev-admin"]);
   for (const target of ["published-1.0.1", "native-1.1.0", "native-1.2.0"]) {
     assert.throws(() => readConfig(repository, target), /Unknown development target/);
   }
-  await assert.rejects(main(["dev-admin", "--target", "native-1.3.0", "--port", "4000"], repository), /Usage/);
+  await assert.rejects(main(["dev-admin", "--target", compatibility.currentTarget, "--port", "4000"], repository), /Usage/);
   await assert.rejects(main(["dev-admin", "--target", "missing"], repository), /Unknown development target/);
-  for (const config of [normal, native]) {
+  for (const name of Object.keys(compatibility.targets)) {
+    const config = readConfig(repository, name);
+    const target = compatibility.targets[name];
     const [refresh, preview] = config.tasks["dev-admin"];
     assert.deepEqual(refresh.args, config.tasks.refresh[0].args);
-    assert.deepEqual(preview.args, ["--import=./scripts/published-host/host-loader.mjs", "scripts/published-host/dev-admin.mjs", "--target", "native-1.3.0"]);
+    assert.deepEqual(preview.args, ["--import=./scripts/published-host/host-loader.mjs", "scripts/published-host/dev-admin.mjs", "--target", name]);
     assert.equal(preview.args.includes("--runtime-only"), false);
-    assert.deepEqual(config.ports, [{ name: "Native EmDash preview", port: 4364 }]);
-    assert.ok(config.sourceFiles.includes("integration/emdash/published-host-1.3.0/astro.native-admin.config.mjs"));
+    assert.deepEqual(config.ports, [{ name: "Native EmDash preview", port: target.port }]);
+    assert.ok(config.sourceFiles.includes(target.dependencyRoot + "/astro.native-admin.config.mjs"));
     for (const file of config.preflight["dev-admin"].files) assert.ok(existsSync(path.join(repository, file)), file);
   }
 });
 
 test("the admin source entry selects matching native targets and refuses mismatched or undeclared targets before Astro", (t) => {
   const root = fixture(t);
-  const script = path.join(root, "dev-admin.mjs");
-  const marker = path.join(root, "selected-preview.json");
+  const scriptDirectory = path.join(root, "scripts/published-host");
+  mkdirSync(scriptDirectory, { recursive: true });
+  const script = path.join(scriptDirectory, "dev-admin.mjs");
+  const marker = path.join(scriptDirectory, "selected-preview.json");
   copyFileSync(path.join(repository, "scripts/published-host/dev-admin.mjs"), script);
-  writeFileSync(path.join(root, "environment.mjs"), [
-    'export function createEnvironment() { return { target: { name: process.env.SHIPIT_HOST_TARGET, fixtureRoot: new URL("./fixture/", import.meta.url), port: ({ "native-1.1.0": 4362, "native-1.2.0": 4363, "native-1.3.0": 4364 })[process.env.SHIPIT_HOST_TARGET] }, assertVersions() {} }; }',
+  copyFileSync(path.join(repository, "scripts/compatibility.mjs"), path.join(root, "scripts/compatibility.mjs"));
+  copyFileSync(path.join(repository, "compatibility.json"), path.join(root, "compatibility.json"));
+  const ports = Object.fromEntries(Object.entries(compatibility.targets).map(([name, target]) => [name, target.port]));
+  writeFileSync(path.join(scriptDirectory, "environment.mjs"), [
+    'export function createEnvironment() { return { target: { name: process.env.SHIPIT_HOST_TARGET, fixtureRoot: new URL("./fixture/", import.meta.url), port: (' + JSON.stringify(ports) + ')[process.env.SHIPIT_HOST_TARGET] }, assertVersions() {} }; }',
     'export function runtimeExport() { return new URL("./astro.mjs", import.meta.url); }',
   ].join("\n"));
-  writeFileSync(path.join(root, "astro.mjs"), 'import { writeFileSync } from "node:fs"; export async function dev(options) { writeFileSync(new URL("./selected-preview.json", import.meta.url), JSON.stringify(options)); }');
+  writeFileSync(path.join(scriptDirectory, "astro.mjs"), 'import { writeFileSync } from "node:fs"; export async function dev(options) { writeFileSync(new URL("./selected-preview.json", import.meta.url), JSON.stringify(options)); }');
   const run = (args, target) => spawnSync(process.execPath, [script, ...args], {
     cwd: root, encoding: "utf8", env: { ...process.env, SHIPIT_HOST_TARGET: target, SHIPIT_PUBLISHED_HOST: root },
   });
+  const [first, second] = Object.keys(ports);
   for (const [args, target] of [
-    [["--target", "native-1.2.0"], "native-1.1.0"],
-    [["--target", "native-1.1.0"], "native-1.2.0"],
+    [["--target", first], second],
+    [["--target", second], first],
     [["--target", "native-9.9.9"], "native-9.9.9"],
     [["--target", "published-1.2.0"], "published-1.2.0"],
   ]) {
@@ -696,7 +705,7 @@ test("the admin source entry selects matching native targets and refuses mismatc
     assert.notEqual(result.status, 0);
     assert.equal(existsSync(marker), false);
   }
-  for (const [target, port] of [["native-1.1.0", 4362], ["native-1.2.0", 4363], ["native-1.3.0", 4364]]) {
+  for (const [target, port] of Object.entries(ports)) {
     const result = run(["--target", target], target);
     assert.equal(result.status, 0, result.stderr);
     const options = JSON.parse(readFileSync(marker, "utf8"));
@@ -983,17 +992,20 @@ previewTest("missing or mismatched installed host pins refuse the preview comman
   }
 });
 
-test("the engine command defaults to the canonical host and refreshes before preview", async (t) => {
+test("the engine command defaults to the current host and refreshes before preview", async (t) => {
   const normal = readConfig(repository);
-  assert.equal(normal.host.target, "native-1.3.0");
-  await assert.rejects(main(["dev-engine", "--target", "native-1.3.0", "--watch"], repository), /Usage/);
+  assert.equal(normal.host.target, compatibility.currentTarget);
+  await assert.rejects(main(["dev-engine", "--target", compatibility.currentTarget, "--watch"], repository), /Usage/);
   await assert.rejects(main(["dev-engine", "--target", "missing"], repository), /Unknown development target/);
   const { root, config, save } = targetFixture(t);
-  config.targets["other-native"] = { ...config.targets["native-1.1.0"] };
+  config.targets["other-sandbox"] = { ...config.targets["native-1.1.0"],
+    host: { ...config.targets["native-1.1.0"].host, target: "other-sandbox", format: "sandbox" } };
   save();
-  await assert.rejects(main(["dev-engine", "--target", "other-native"], root), /requires the native-1\.3\.0 host/);
+  await assert.rejects(main(["dev-engine", "--target", "other-sandbox"], root), /requires a native host/);
   assert.equal(existsSync(path.join(root, "artifacts")), false);
-  for (const native of [normal, readConfig(repository, "native-1.3.0")]) {
+  for (const name of Object.keys(compatibility.targets)) {
+    const native = readConfig(repository, name);
+    const target = compatibility.targets[name];
     assert.equal(native.tasks["dev-engine"].length, 2);
     const [refresh, preview] = native.tasks["dev-engine"];
     assert.equal(refresh.command, "node");
@@ -1003,13 +1015,13 @@ test("the engine command defaults to the canonical host and refreshes before pre
     assert.deepEqual(preview.args, native.tasks.dev[0].args);
     assert.equal(preview.timeoutMs, native.tasks.dev[0].timeoutMs);
     assert.equal(native.preflight["dev-engine"].installedPins, true);
-    assert.ok(native.preflight["dev-engine"].files.includes("integration/emdash/published-host-1.3.0/astro.native.config.mjs"));
-    assert.equal(native.preflight["dev-engine"].files.includes("integration/emdash/published-host-1.3.0/astro.native-admin.config.mjs"), false);
+    assert.ok(native.preflight["dev-engine"].files.includes(target.dependencyRoot + "/astro.native.config.mjs"));
+    assert.equal(native.preflight["dev-engine"].files.includes(target.dependencyRoot + "/astro.native-admin.config.mjs"), false);
     for (const file of native.preflight["dev-engine"].files) assert.ok(existsSync(path.join(repository, file)), file);
   }
   const scripts = JSON.parse(readFileSync(path.join(repository, "package.json"), "utf8")).scripts;
-  assert.match(scripts["dev:engine"], /cli\.mjs dev-engine(?: --target native-1\.3\.0)?$/);
-  assert.match(scripts["dev:setup"], /cli\.mjs setup(?: --target native-1\.3\.0)?$/);
+  assert.match(scripts["dev:engine"], /cli\.mjs dev-engine$/);
+  assert.match(scripts["dev:setup"], /cli\.mjs setup$/);
 });
 
 test("a failed engine refresh prevents preview and preserves prior full verification", async (t) => {
