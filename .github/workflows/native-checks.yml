@@ -27,8 +27,6 @@ jobs:
       COREPACK_ENV_FILE: "0"
       COREPACK_NPM_REGISTRY: "https://registry.npmjs.org"
       NPM_CONFIG_REGISTRY: "https://registry.npmjs.org/"
-      NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/shipit-native-config/user.npmrc
-      NPM_CONFIG_GLOBALCONFIG: ${{ runner.temp }}/shipit-native-config/global.npmrc
       NPM_CONFIG_FETCH_RETRIES: "0"
       NPM_CONFIG_FETCH_TIMEOUT: "60000"
       NPM_CONFIG_AUDIT: "false"
@@ -87,9 +85,12 @@ jobs:
             "$EXPECTED_NODE_PIN_SHA256" .node-version \
             "$EXPECTED_ROOT_MANIFEST_SHA256" package.json \
             | sha256sum --check --strict
-          mkdir -p "$RUNNER_TEMP/shipit-native-config"
-          : > "$NPM_CONFIG_USERCONFIG"
-          : > "$NPM_CONFIG_GLOBALCONFIG"
+          config_root="$RUNNER_TEMP/shipit-native-config"
+          mkdir -p "$config_root"
+          : > "$config_root/user.npmrc"
+          : > "$config_root/global.npmrc"
+          printf 'NPM_CONFIG_USERCONFIG=%s\nNPM_CONFIG_GLOBALCONFIG=%s\n' \
+            "$config_root/user.npmrc" "$config_root/global.npmrc" >> "$GITHUB_ENV"
 
       - name: Set up the generated Node pin
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
