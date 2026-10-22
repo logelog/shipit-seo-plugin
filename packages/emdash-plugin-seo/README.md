@@ -4,7 +4,7 @@ Native SEO tools for EmDash: metadata, structured data, content checks,
 sitemaps, redirects and IndexNow in one package.
 
 <!-- compatibility:package:start -->
-Version `0.4.0-beta.54` is a native beta.
+Version `0.4.0-beta.55` is a native beta.
 
 Native EmDash/admin support: **1.3.1 or 1.3.0**.
 Use Node **24.19.0**, Astro **7.3.2** and SQLite.
@@ -28,7 +28,7 @@ versions above; other host versions have not completed this beta's support check
 Install the exact beta:
 
 ```sh
-npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.54
+npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.55
 ```
 
 Use your existing package manager if the site uses pnpm or another lockfile.

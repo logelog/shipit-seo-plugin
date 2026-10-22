@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-beta.55
+
+Prepare the native beta with synchronized compatibility and installation
+guidance. SEO checks and native integration behavior are unchanged from
+beta.54. See README.md for the supported scope and UPGRADE.md for the
+limits of historical update and removal checks.
+
 ## 0.4.0-beta.54
 
 Initial public beta source for native EmDash and admin 1.3.0 or 1.3.1 on Node

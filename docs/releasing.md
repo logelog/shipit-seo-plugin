@@ -146,11 +146,15 @@ needs source, tests and contributor tools; the npm archive uses the package's
 - Check the actual hosted results for the reviewed commit. **Repository quality**
   runs public-file, translation and development-tooling checks without installing
   EmDash. It does not establish product or installed-package acceptance.
-- Native quick and full verification reference workflows are inactive examples.
-  Before enabling a lane, review its locked dependency graph, install
-  scripts, token permissions and fork behavior. Keep fork checks read-only and
-  publishing credentials out of PR jobs. Native quick checks build, types and
-  selfchecks; it is not full release verification.
+- [Native checks](../.github/workflows/native-checks.yml) is a manually
+  dispatched source check for the current compatibility target. It runs the
+  package build, type checks and selfchecks. It has no push or pull-request
+  trigger and does not publish packages or deploy sites. Full release
+  qualification and exact-archive acceptance remain separate. The reference
+  workflows under `docs/ci` are inactive examples. Before changing a native
+  lane, review its locked dependency graph, install scripts, token permissions
+  and fork behavior. Keep fork checks read-only and publishing credentials
+  out of PR jobs.
 - Full verification requires a prepared SHIPIT_NPM_OFFLINE_CACHE; missing cache
   remains a not-run failure for release evidence. Do not turn a skipped check
   into a pass or describe quick checks as full verification.

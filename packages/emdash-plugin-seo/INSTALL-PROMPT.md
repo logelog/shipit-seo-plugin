@@ -1,7 +1,7 @@
 # Install Shipit SEO in an existing EmDash site
 
 Copy the request below into your site's development task. It targets the
-native `@shipitseo/emdash-plugin-seo@0.4.0-beta.54` beta release.
+native `@shipitseo/emdash-plugin-seo@0.4.0-beta.55` beta release.
 It does not authorize a deployment, production-data changes or IndexNow
 submission.
 
@@ -14,7 +14,7 @@ Use Node **24.19.0**, Astro **7.3.2** and SQLite.
 <!-- compatibility:support:end -->
 
 ```text
-Install Shipit SEO 0.4.0-beta.54 in this existing site and verify the actual
+Install Shipit SEO 0.4.0-beta.55 in this existing site and verify the actual
 admin and public output.
 
 First inspect the repository's instructions, package manifest/lockfile,
@@ -25,7 +25,7 @@ report the mismatch before changing it. Do not upgrade the host as part of
 this task.
 
 Use the site's existing package manager and install the exact version:
-  npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.54
+  npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.55
 For pnpm, use pnpm add --save-exact with the same package and version.
 Use the equivalent exact-save command for another existing package manager.
 Do not create another lockfile or install the historical Shipit admin package.

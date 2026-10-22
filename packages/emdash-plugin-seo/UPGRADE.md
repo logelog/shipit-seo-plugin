@@ -1,7 +1,7 @@
 # Upgrade Shipit SEO safely
 
 <!-- compatibility:package:start -->
-Version `0.4.0-beta.54` is a native beta.
+Version `0.4.0-beta.55` is a native beta.
 
 Native EmDash/admin support: **1.3.1 or 1.3.0**.
 Use Node **24.19.0**, Astro **7.3.2** and SQLite.
@@ -97,14 +97,14 @@ archive file, keep that archive with the backup: the lockfile refers to it.
 Use the site's existing package manager. For a pnpm site:
 
 ```sh
-pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.54
+pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.55
 ```
 
 For an npm site, use this command instead. An update with npm is not verified
 for this release; see [Tested update paths](#tested-update-paths).
 
 ```sh
-npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.54
+npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.55
 ```
 
 Keep one lockfile and review the dependency diff. Retain the existing Astro
