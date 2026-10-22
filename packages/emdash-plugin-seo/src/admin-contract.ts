@@ -321,7 +321,7 @@ export { TEMPLATE_VARS as TEMPLATE_VARIABLE_NAMES };
 export const SEO_ADMIN_CONTRACT_VERSION = 47 as const;
 export const CONTENT_SCORING_RESOURCE_NOTICE_VERSION = 1 as const;
 export const SEO_ENGINE_PLUGIN_ID = "shipit-seo";
-export const SEO_ENGINE_VERSION = "0.4.0-beta.54";
+export const SEO_ENGINE_VERSION = "0.4.0-beta.55";
 export const SEO_ADMIN_API_ROUTES = [
 	"admin-branding",
 	"admin-plugin-coexistence",
