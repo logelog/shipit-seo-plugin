@@ -1,0 +1,32 @@
+---
+import { createPublicPageContext } from "emdash/page";
+import { EmDashHead, EmDashBodyStart, EmDashBodyEnd } from "emdash/ui";
+
+const page = createPublicPageContext({
+  Astro,
+  kind: "custom",
+  title: "SEO fixture page",
+  description: "A public page for checking rendered SEO metadata.",
+  canonical: "https://example.test/seo-fixture/",
+  image: "https://example.test/seo-fixture.jpg",
+  siteName: "Shipit fixture",
+  siteUrl: "https://example.test/",
+  seo: {
+    ogTitle: "SEO fixture social title",
+    ogDescription: "SEO fixture social description",
+  },
+});
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SEO fixture page</title>
+    <EmDashHead page={page} />
+  </head>
+  <body>
+    <EmDashBodyStart page={page} />
+    <main><h1>SEO fixture page</h1></main>
+    <EmDashBodyEnd page={page} />
+  </body>
+</html>

@@ -20,8 +20,12 @@ Only the latest published beta is maintained; older betas do not receive
 separate security backports. Reports affecting older versions are welcome,
 but the maintainer may ask you to check the latest beta.
 
-The beta supports native EmDash and admin 1.3.0 and 1.3.1 with Astro 7.3.2,
-Node 24.19.0 and SQLite. The plugin runs in the trusted host process; it is not
+<!-- compatibility:support:start -->
+Native EmDash/admin support: **1.3.1 or 1.3.0**.
+Use Node **24.19.0**, Astro **7.3.2** and SQLite.
+<!-- compatibility:support:end -->
+
+The plugin runs in the trusted host process; it is not
 a sandbox boundary. Cloudflare Workers/D1, Postgres and sandbox installations
 have not completed this beta's verification. This limits support claims, not
 whether a security issue can be reported.

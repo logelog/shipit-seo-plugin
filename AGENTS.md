@@ -2,9 +2,22 @@
 
 Shipit SEO is a native EmDash plugin. Read [CONTRIBUTING.md](CONTRIBUTING.md)
 for setup and review, and [docs/architecture.md](docs/architecture.md) for the
-runtime contracts. This beta targets native EmDash and admin 1.3.0 or 1.3.1,
-Astro 7.3.2, Node 24.19.0 and SQLite. The default development fixture uses
-1.3.0; other runtimes and databases need separate acceptance evidence.
+runtime contracts.
+
+<!-- compatibility:development:start -->
+The default development target is **native-1.3.1** (EmDash/admin 1.3.1).
+Use Node **24.19.0**, pnpm **11.19.0**, Astro **7.3.2** and SQLite.
+The fixture is `integration/emdash/published-host-1.3.1`; its preview is
+`http://127.0.0.1:4365/_emdash/admin`.
+
+Retained native targets: `native-1.3.0`.
+The current target implements quick verification; full verification is not implemented for this target.
+<!-- compatibility:development:end -->
+
+[compatibility.json](compatibility.json) owns current targets and runtime pins.
+Follow [docs/compatibility.md](docs/compatibility.md) when changing them; run
+`pnpm sync:compatibility` and `pnpm check:compatibility`. Do not rewrite history
+or broaden support by replacing version strings throughout the repository.
 
 Use pull requests for contributions. Keep review comments constructive and
 follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). A passing check does not replace
@@ -18,7 +31,7 @@ maintainer review or the contributor agreement.
 - `packages/emdash-plugin-seo/src/admin-ui`: workspace and editor interfaces;
   `i18n` contains bundled message catalogues and locale fallback.
 - `packages/emdash-plugin-seo/scripts`: package build and archive checks.
-- `integration/emdash/published-host-1.3.0`: pinned development fixture.
+- `integration/emdash/published-host-*`: isolated pinned development fixtures.
 - `scripts/published-host`: host verification and installed-package checks.
 - `tooling/plugin-dev` and `plugin-dev.json`: development commands and targets.
 
@@ -42,7 +55,9 @@ and starts the preview; restart it after an engine edit. Run one preview or
 verification at a time. Stop the preview before setup, build or verification.
 Use synthetic fixture data and keep authentication shortcuts on loopback.
 
-For product changes, run `pnpm verify` and `pnpm dev:report`. Use the focused
+For product changes, use the implemented verification modes listed in
+[docs/compatibility.md](docs/compatibility.md) and run `pnpm dev:report`. A mode
+that is not implemented must fail explicitly, not skip required checks. Use the focused
 selfcheck invocation and discovery rules in CONTRIBUTING while developing.
 Run `pnpm check:translations` for catalogue changes and `pnpm check:public`
 before submitting. Check the diff for whitespace and unrelated files.

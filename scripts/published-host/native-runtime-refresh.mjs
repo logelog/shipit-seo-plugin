@@ -1,8 +1,11 @@
 import { lstatSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
+import { readCompatibility } from "../compatibility.mjs";
+
+const nativeTargets = new Set(Object.keys(readCompatibility().targets));
 
 export async function preflightNativeRuntimeRefresh(environment, { checkPort = assertPreviewPortAvailable } = {}) {
-  if (!["native-1.1.0", "native-1.2.0", "native-1.3.0"].includes(environment?.target?.name)) throw new Error("Runtime-only refresh requires the native-1.1.0, native-1.2.0 or native-1.3.0 target");
+  if (!nativeTargets.has(environment?.target?.name)) throw new Error("Runtime-only refresh requires a configured native host target.");
   await environment.assertVersions();
   await checkPort(environment.target.port);
 }

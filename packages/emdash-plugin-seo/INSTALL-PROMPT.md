@@ -8,14 +8,19 @@ submission.
 For an existing installation, read [the upgrade guide](UPGRADE.md) first.
 For later removal while keeping data, use [the removal prompt](UNINSTALL-PROMPT.md).
 
+<!-- compatibility:support:start -->
+Native EmDash/admin support: **1.3.1 or 1.3.0**.
+Use Node **24.19.0**, Astro **7.3.2** and SQLite.
+<!-- compatibility:support:end -->
+
 ```text
 Install Shipit SEO 0.4.0-beta.54 in this existing site and verify the actual
 admin and public output.
 
 First inspect the repository's instructions, package manifest/lockfile,
-Astro configuration, EmDash setup and public page layouts. This beta targets
-EmDash and @emdash-cms/admin 1.3.0 or 1.3.1, native Node and SQLite; its tested host uses
-Node 24.19.0 and Astro 7.3.2. If the site uses another host/runtime/database,
+Astro configuration, EmDash setup and public page layouts. Check the exact
+package's native host/runtime requirements before installation. If the site
+uses another host/runtime/database,
 report the mismatch before changing it. Do not upgrade the host as part of
 this task.
 

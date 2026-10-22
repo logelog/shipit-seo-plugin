@@ -1,9 +1,21 @@
 # Architecture
 
-Shipit SEO keeps one shared domain engine and a native adapter for the active
-EmDash 1.3.0 development target, with separate installed-host acceptance for
-EmDash/admin 1.3.1. The admin uses EmDash's existing React, Kumo
+Shipit SEO keeps one shared domain engine and a native adapter. The admin uses EmDash's existing React, Kumo
 and query dependencies rather than installing a separate admin application.
+
+<!-- compatibility:development:start -->
+The default development target is **native-1.3.1** (EmDash/admin 1.3.1).
+Use Node **24.19.0**, pnpm **11.19.0**, Astro **7.3.2** and SQLite.
+The fixture is `integration/emdash/published-host-1.3.1`; its preview is
+`http://127.0.0.1:4365/_emdash/admin`.
+
+Retained native targets: `native-1.3.0`.
+The current target implements quick verification; full verification is not implemented for this target.
+<!-- compatibility:development:end -->
+
+[compatibility.json](../compatibility.json) supplies target selection and pins
+to the development toolkit and host environment. See
+[compatibility.md](compatibility.md) for upgrades and evidence boundaries.
 
 ## Code map
 

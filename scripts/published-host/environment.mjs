@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { readCompatibility, selectCompatibilityTarget } from "../compatibility.mjs";
 
 export const sourceRoot = new URL("../../", import.meta.url);
 export const seoPackageRoot = new URL("packages/emdash-plugin-seo/", sourceRoot);
@@ -11,30 +12,29 @@ export const canonicalPackages = new Map([
   ["@shipit/emdash-plugin-seo", seoPackageRoot],
 ]);
 
-// The contributor fixture uses one published host graph and local state root.
-export const defaultHostTarget = "native-1.3.0";
-const hostTargets = new Map([
-  ["native-1.3.0", {
-    fixture: "integration/emdash/published-host-1.3.0/", state: ".dev/native-host-1.3.0/",
-    output: "artifacts/native-host-1.3.0/", port: 4364,
-    configFile: "astro.native.config.mjs", consumerSource: "src-native/",
-    versions: [["emdash", "1.3.0"], ["@emdash-cms/admin", "1.3.0"], ["astro", "7.3.2"]],
-  }],
-]);
+// Runtime and tooling select the same current or retained compatibility target.
+const compatibility = readCompatibility(sourceRoot);
+export const defaultHostTarget = compatibility.currentTarget;
 
 export function selectHostTarget(name = process.env.SHIPIT_HOST_TARGET || defaultHostTarget) {
-  const target = hostTargets.get(name);
-  if (!target) throw new Error(`Unknown host target ${name}. Select one of: ${[...hostTargets.keys()].join(", ")}`);
+  if (!Object.hasOwn(compatibility.targets, name)) {
+    throw new Error(`Unknown host target ${name}. Select one of: ${Object.keys(compatibility.targets).join(", ")}`);
+  }
+  const target = selectCompatibilityTarget(compatibility, name);
   return {
     name,
-    fixtureRoot: new URL(target.fixture, sourceRoot),
-    stateRoot: new URL(target.state, sourceRoot),
-    outputRoot: new URL(target.output, sourceRoot),
+    fixtureRoot: new URL(target.dependencyRoot + "/", sourceRoot),
+    stateRoot: new URL(`.dev/native-host-${target.emdash}/`, sourceRoot),
+    outputRoot: new URL(`artifacts/native-host-${target.emdash}/`, sourceRoot),
     port: target.port,
-    configFile: target.configFile ?? "astro.config.mjs",
-    consumerSource: target.consumerSource ?? "src/",
-    versions: new Map(target.versions),
+    configFile: "astro.native.config.mjs",
+    consumerSource: "src-native/",
+    versions: new Map(Object.entries(target.versions)),
   };
+}
+
+export function assertVerificationMode(target, mode) {
+  selectCompatibilityTarget(compatibility, target.name, { mode });
 }
 
 export const hostTarget = selectHostTarget();

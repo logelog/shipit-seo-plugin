@@ -90,17 +90,17 @@ test("unknown package build grammar still fails instead of silently dropping pro
 });
 
 test("native-only preflight rejects other targets before reading pins or probing a port", async () => {
-  for (const name of ["published-1.0.1", "published-1.1.0", "published-1.2.0", "sandbox-1.2.0", "native-9.9.9", "other", undefined]) {
+  for (const name of ["published-1.0.1", "published-1.1.0", "published-1.2.0", "sandbox-1.2.0", "native-1.1.0", "native-1.2.0", "native-9.9.9", "other", undefined]) {
     let reads = 0;
     await assert.rejects(preflightNativeRuntimeRefresh({ target: { name, port: 4360 }, assertVersions() { reads += 1; } }, {
       checkPort() { reads += 1; },
-    }), /native-1.1.0, native-1.2.0 or native-1.3.0 target/);
+    }), /configured native host target/);
     assert.equal(reads, 0);
   }
 });
 
 test("native preflight validates host pins before the port and propagates either failure", async () => {
-  for (const [name, port] of [["native-1.1.0", 4362], ["native-1.2.0", 4363], ["native-1.3.0", 4364]]) {
+  for (const [name, port] of [["native-1.3.0", 4364], ["native-1.3.1", 4365]]) {
     const calls = [];
     const environment = { target: { name, port }, assertVersions() { calls.push("pins"); } };
     await preflightNativeRuntimeRefresh(environment, { checkPort(selectedPort) { calls.push(selectedPort); } });

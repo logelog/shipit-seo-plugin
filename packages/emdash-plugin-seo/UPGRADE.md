@@ -1,8 +1,13 @@
 # Upgrade Shipit SEO safely
 
-This guide covers the `0.4.0-beta.54` beta release for native EmDash and
-admin 1.3.0 or 1.3.1 on Node with SQLite. Its target host uses Node 24.19.0 and Astro
-7.3.2. Earlier 0.4.0 betas were pre-release candidates and were not published;
+<!-- compatibility:package:start -->
+Version `0.4.0-beta.54` is a native beta.
+
+Native EmDash/admin support: **1.3.1 or 1.3.0**.
+Use Node **24.19.0**, Astro **7.3.2** and SQLite.
+<!-- compatibility:package:end -->
+
+Earlier 0.4.0 betas were pre-release candidates and were not published;
 the sections for them below apply to a site that installed one of those
 candidates from an archive. Cloudflare Workers/D1, Postgres and
 sandbox/registry installations remain outside this beta's verified scope. Live

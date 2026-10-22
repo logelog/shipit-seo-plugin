@@ -1,0 +1,48 @@
+---
+// Development fixture only: serves published Posts entries at the public
+// address the host reports for them (/posts/{slug}). This site has no Astro
+// i18n, so the unprefixed address serves the site locale explicitly; an
+// unqualified lookup would pick any locale sharing the slug. Shipit's sitemap
+// lists only site-locale rows on such sites for the same reason.
+import { getEmDashEntry } from "emdash";
+import { createPublicPageContext } from "emdash/page";
+import { EmDashHead, EmDashBodyStart, EmDashBodyEnd } from "emdash/ui";
+
+const SITE_LOCALE = "en";
+const { slug } = Astro.params;
+if (!slug) return new Response(null, { status: 404 });
+const { entry, error } = await getEmDashEntry("posts", slug, { locale: SITE_LOCALE });
+if (error) throw error;
+const data = (entry?.data ?? {}) as Record<string, unknown>;
+if (!entry || typeof data.id !== "string") return new Response(null, { status: 404 });
+const title = typeof data.title === "string" && data.title ? data.title : slug;
+const excerpt = typeof data.excerpt === "string" ? data.excerpt : "";
+const page = createPublicPageContext({
+	Astro,
+	kind: "content",
+	pageType: "article",
+	title,
+	pageTitle: title,
+	description: excerpt || null,
+	canonical: new URL(Astro.url.pathname, Astro.url.origin).href,
+	siteName: "Dev Site",
+	content: { collection: "posts", id: data.id, slug: entry.id },
+});
+---
+<!doctype html>
+<html lang={SITE_LOCALE}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<title>{title}</title>
+		<EmDashHead page={page} />
+	</head>
+	<body>
+		<EmDashBodyStart page={page} />
+		<main>
+			<h1>{title}</h1>
+			{excerpt ? <p>{excerpt}</p> : null}
+		</main>
+		<EmDashBodyEnd page={page} />
+	</body>
+</html>

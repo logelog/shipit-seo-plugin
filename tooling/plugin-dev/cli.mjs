@@ -7,6 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runCommand } from "./runner.mjs";
 import { readCheckoutState, sourceFileInputs, verificationState } from "./workspace-state.mjs";
+import { readCompatibility, selectCompatibilityTarget, expectedPackagePins } from "../../scripts/compatibility.mjs";
 
 const readJson = (file) => JSON.parse(readFileSync(file, "utf8"));
 const reportPath = "artifacts/plugin-dev";
@@ -20,7 +21,26 @@ export function repoPath(root, relative) {
 }
 
 export function readConfig(root, targetName) {
-  const { targets = {}, ...base } = readJson(path.join(root, "plugin-dev.json"));
+  let { targets = {}, ...base } = readJson(path.join(root, "plugin-dev.json"));
+  if (base.compatibilityFile !== undefined) {
+    if (base.compatibilityFile !== "compatibility.json") throw new Error("Use the repository compatibility.json policy.");
+    const policy = readCompatibility(root);
+    const selected = targetName ?? policy.currentTarget;
+    if (typeof selected !== "string" || !Object.hasOwn(policy.targets, selected)) {
+      throw new Error(`Unknown development target ${selected}. Select a target from compatibility.json.`);
+    }
+    const target = selectCompatibilityTarget(policy, selected);
+    const expand = (value) => {
+      if (typeof value === "string") return value.replaceAll("{target}", selected).replaceAll("{fixture}", target.dependencyRoot);
+      if (Array.isArray(value)) return value.map(expand);
+      if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, expand(item)]));
+      return value;
+    };
+    base = { ...expand(base), name: `${base.name} ${selected}`,
+      host: { ...base.host, target: selected }, dependencyRoot: target.dependencyRoot,
+      expectedPackages: expectedPackagePins(policy, selected), ports: [{ name: "Native EmDash preview", port: target.port }] };
+    targets = Object.fromEntries(Object.keys(policy.targets).map(name => [name, {}]));
+  }
   if (!targets || typeof targets !== "object" || Array.isArray(targets) ||
       Object.entries(targets).some(([name, value]) => !safeLabel.test(name) || name === "default" ||
         !value || typeof value !== "object" || Array.isArray(value))) {
@@ -357,7 +377,7 @@ export function readRecordedReport(root, config, label = "run") {
 export async function main(argv = process.argv.slice(2), root = process.cwd(), lockDirectory) {
   const [command, ...args] = argv;
   if (!command || command === "help" || command === "--help") {
-    console.log("Plugin development: doctor | setup | quick | verify | browser | dev | report | refresh | dev-admin | dev-engine (native EmDash 1.3.0; optional --target native-1.3.0) | clean [--apply]");
+    console.log("Plugin development: doctor | setup | quick | verify | browser | dev | report | refresh | dev-admin | dev-engine [--target NAME] | clean [--apply]. compatibility.json selects the default host.");
     return 0;
   }
   if (command === "clean") {
@@ -370,7 +390,10 @@ export async function main(argv = process.argv.slice(2), root = process.cwd(), l
   }
   const targetName = parseTargetArgs(args);
   const config = readConfig(root, targetName);
-  if (command === "dev-engine" && config.host?.target !== "native-1.3.0") throw new Error("dev-engine requires the native-1.3.0 host.");
+  if (config.compatibilityFile && ["quick", "verify"].includes(command)) {
+    selectCompatibilityTarget(readCompatibility(root), config.host.target, { mode: command === "verify" ? "full" : "quick" });
+  }
+  if (command === "dev-engine" && config.host?.format !== "native") throw new Error("dev-engine requires a native host.");
   if (command === "report") {
     console.log(JSON.stringify(readRecordedReport(root, config), null, 2));
     return 0;

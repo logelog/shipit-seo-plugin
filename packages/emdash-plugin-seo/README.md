@@ -3,9 +3,15 @@
 Native SEO tools for EmDash: metadata, structured data, content checks,
 sitemaps, redirects and IndexNow in one package.
 
-Version `0.4.0-beta.54` targets **native EmDash and admin 1.3.0 or 1.3.1 on Node with SQLite**.
+<!-- compatibility:package:start -->
+Version `0.4.0-beta.54` is a native beta.
+
+Native EmDash/admin support: **1.3.1 or 1.3.0**.
+Use Node **24.19.0**, Astro **7.3.2** and SQLite.
+<!-- compatibility:package:end -->
+
 Earlier 0.4.0 betas were pre-release candidates and were not published.
-The target host uses Node 24.19.0 and Astro 7.3.2. This is a beta; validate it
+Validate this beta
 on a separate copy of your site before a production upgrade. Cloudflare
 Workers/D1, Postgres and sandbox/registry installations are outside this
 beta's verified scope. Live IndexNow provider delivery, full multilingual use
@@ -621,7 +627,7 @@ of being replaced. Saving still uses the redirect form's checks.
 
 ## Canonical and language status
 
-On the native EmDash 1.3.0 target, change the canonical URL or indexing in
+On supported native EmDash targets, change the canonical URL or indexing in
 EmDash's own SEO panel. The editor's **Advanced** tab groups its controls by
 save scope. **Saved with the entry** shows their saved summaries, with notes
 for site-wide noindex and an inherited content type rule. **Applies to the live
@@ -1363,7 +1369,7 @@ a rollback shortcut.
 ## Disable or remove
 
 For the full copyable request, use [the removal prompt](UNINSTALL-PROMPT.md).
-It covers native EmDash/admin 1.3.0 and 1.3.1 on Node with SQLite and keeps all site and
+It covers the native hosts listed above and keeps all site and
 plugin data.
 
 Before removing the package, review the indexing policy that will remain.

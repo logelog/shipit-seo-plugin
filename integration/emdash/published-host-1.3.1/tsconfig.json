@@ -1,0 +1,5 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "include": ["emdash-env.d.ts", "src-native/**/*"],
+  "exclude": ["node_modules"]
+}
