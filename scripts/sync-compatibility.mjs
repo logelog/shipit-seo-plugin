@@ -6,7 +6,7 @@ import { compatibilityRoot, expectedPackagePins, hostPeerRange, readCompatibilit
 import { runtimeHostSupportErrors } from "./runtime-host-compatibility.mjs";
 
 export const managedDocuments = Object.freeze({
-  "README.md": "development",
+  "README.md": "support",
   "AGENTS.md": "development",
   "CONTRIBUTING.md": "development",
   "SECURITY.md": "support",
@@ -35,7 +35,7 @@ export function renderCompatibilityBlock(policy, kind, productVersion) {
   if (kind === "support") return support;
   if (kind === "package") return `Version \`${productVersion}\` is a native beta.\n\n${support}`;
   if (kind === "development") {
-    return `The default development target is **${current.name}** (EmDash/admin ${hostLabel(current)}).\nUse Node **${node}**, pnpm **${pnpm}**, Astro **${astro}** and SQLite.\nThe fixture is \`${current.dependencyRoot}\`; its preview is\n\`http://127.0.0.1:${current.port}/_emdash/admin\`.\n\nRetained native targets: ${policy.retainedTargets.length ? policy.retainedTargets.map(name => `\`${name}\``).join(", ") : "none"}.\nThe current target implements ${current.verifyModes.join(" and ")} verification${current.verifyModes.includes("full") ? "." : "; full verification is not implemented for this target."}`;
+    return `The default development target is **${current.name}** (EmDash/admin ${hostLabel(current)}).\nUse Node **${node}**, pnpm **${pnpm}**, Astro **${astro}** and SQLite.\nThe fixture is \`${current.dependencyRoot}\`.\n\nRetained native targets: ${policy.retainedTargets.length ? policy.retainedTargets.map(name => `\`${name}\``).join(", ") : "none"}.\nThe current target implements ${current.verifyModes.join(" and ")} verification${current.verifyModes.includes("full") ? "." : "; full verification is not implemented for this target."}`;
   }
   if (kind === "matrix") {
     const rows = sortedTargets(policy).map(name => {

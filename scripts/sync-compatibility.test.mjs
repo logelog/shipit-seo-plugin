@@ -176,7 +176,7 @@ test("development drift catches a stale default, task target and runtime pin", (
 test("current docs, product pins and retained fixture agree; changing a current block is detected", async t => {
   const { root, write, policy } = fixture(t);
   assert.deepEqual(await checkCompatibility(root, { development: development(policy, root) }), []);
-  write("README.md", readFileSync(path.join(root, "README.md"), "utf8").replace("default development target is **native-1.3.1**", "default development target is **native-1.3.0**"));
+  write("README.md", readFileSync(path.join(root, "README.md"), "utf8").replace("Native EmDash/admin support: **1.3.1 or 1.3.0**", "Native EmDash/admin support: **1.3.0**"));
   assert.match((await checkCompatibility(root, { development: development(policy, root) })).join("\n"), /README.md: compatibility values are stale/);
 });
 
@@ -184,4 +184,11 @@ test("managed blocks must exist exactly once", () => {
   assert.throws(() => replaceCompatibilityBlock("No markers", "support", "text", "README.md"), /Expected one/);
   const block = "<!-- compatibility:support:start -->old<!-- compatibility:support:end -->";
   assert.throws(() => replaceCompatibilityBlock(block + block, "support", "text", "README.md"), /Expected one/);
+});
+
+test("development guidance contains target metadata without workstation links", () => {
+  const block = renderCompatibilityBlock(validateCompatibility(initial()), "development");
+  assert.match(block, /native-1\.3\.1/);
+  assert.match(block, /integration\/emdash\/published-host-1\.3\.1/);
+  assert.doesNotMatch(block, /https?:\/\/|4365|open.{0,20}(?:URL|address)/i);
 });

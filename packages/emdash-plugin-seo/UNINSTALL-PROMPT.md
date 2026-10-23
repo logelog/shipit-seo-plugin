@@ -1,163 +1,125 @@
-# Remove Shipit SEO while keeping its data
+# Remove Shipit SEO while keeping data
 
-Copy the request below into your site's development task. It covers the native
-Shipit SEO installation. Start
-with an isolated copy; this request does not authorize production removal,
-deployment, data deletion or IndexNow submission.
+Rehearse removal on a copy of the site. Disabling the plugin, removing its
+package and deleting its data are separate operations. This guide retains
+data; the beta provides no purge workflow.
 
 <!-- compatibility:support:start -->
 Native EmDash/admin support: **1.3.1 or 1.3.0**.
 Use Node **24.19.0**, Astro **7.3.2** and SQLite.
 <!-- compatibility:support:end -->
 
-```text
-Remove @shipitseo/emdash-plugin-seo from this isolated site copy while keeping
-all existing content, settings, plugin data, database records and uploads.
-Verify the resulting admin and public output.
+## 1. Plan the remaining output
 
-First inspect the repository's instructions, installed package versions,
-manifest/lockfile, Astro configuration, EmDash setup and public templates.
-Check the installed package's native host/runtime requirements. Report a
-different host/runtime/database before changing it. Do not
-upgrade EmDash or use a registry plugin's Uninstall or Delete data flow for
-this native npm installation.
+Record the current versions, configuration and intended indexing policy.
+Disabling Shipit stops its metadata, JSON-LD, verification tags, public-file
+contributions and noindex rules. Transfer required restrictions to their
+remaining owner before disabling; do not silently make restricted pages
+indexable.
 
-Record the current public output and intended indexing policy. Removing
-Shipit SEO stops its metadata, social exceptions, extra robots directives,
-JSON-LD, custom verification tags and public-file contributions. Google/Bing
-verification codes remain in core settings and retain their core output. Its
-site-wide, content type and selected-taxonomy archive noindex restrictions
-also stop applying. Identify the owner that will preserve any required
-restrictions before proceeding; do not silently make restricted pages
-indexable. Core entry SEO, saved core robots.txt, redirects, content and media
-stay with EmDash. Existing SEO values migrated into core stay there.
+Native EmDash SEO, content, media, core robots settings and redirects remain
+with EmDash. Independently owned public files and routes keep their own
+behavior. Do not delete taxonomy archives or alter assigned posts to compensate
+for removal.
 
-If templates import taxonomyArchivePage, remove that package import and its
-wrapper while retaining the underlying custom page context, EmDashHead and
-archive route. Transfer any required archive noindex restriction to its new
-owner before disabling Shipit. Moving it into a template, for example as the
-page context's seo robots value, needs its own production build and restart
-before Disable. From 0.4.0-beta.45 Shipit keeps the directives of a template
-robots value that already contains noindex, written in lowercase and
-comma-separated (noindex, follow becomes noindex,follow), so check the moved
-value in the public page source before Disable. Earlier versions rewrite it to
-noindex,nofollow, so there the moved value can only be checked after Disable.
-Do not delete existing archive pages or alter assigned posts to compensate for
-removal.
+## 2. Stop optional work, then disable
 
-Before disabling the plugin, stop the current score scan through its controls
-and confirm in Content health that no scan is running. In Feature controls,
-choose Pause automatic & bulk for automatic and bulk analysis.
-Stop automatic IndexNow submission and turn IndexNow delivery off if enabled,
-then confirm on the IndexNow page that both are off. Do not send pending URLs
-just to empty the queue. Reconcile pending saves, analysis, imports, migrations
-and delivery attempts before continuing. Closing a browser tab does not prove
-that server work stopped. A request already running can still finish; disabling
-the plugin cannot undo a provider request already received.
+While the package and configuration are still installed:
 
-IndexNow Off keeps its public verification key, queue and history, and the key
-can still be served at /indexnow-key.txt. It does not cancel every scheduled
-or already running task.
+1. Stop the current scan and confirm Content health has no running scan.
+2. Choose Pause automatic & bulk in Feature controls.
+3. Turn off automatic IndexNow submission and IndexNow delivery. Do not send
+   pending URLs merely to empty the queue.
+4. Reconcile pending saves, imports, analysis and delivery requests.
+5. Disable the plugin listed as shipit-seo in EmDash's plugins manager and
+   confirm it is inactive.
 
-While the package and configuration are still installed, use Disable for the
-plugin listed as shipit-seo in EmDash's plugins manager and confirm that it
-lists the plugin as inactive. EmDash 1.3 has no supported view of a plugin's
-scheduled tasks: rely on the scan and IndexNow checks made before disabling,
-and report that scheduled tasks could not be inspected directly. After Disable, Shipit SEO
-leaves the EmDash admin menu and the content editor, and its plugin API routes
-return 404. Opening its admin page directly shows "SHIPIT SEO is disabled.
-Enable it in EmDash Plugins to use these settings. Saved data is kept.", with
-the configured name in place of SHIPIT SEO when branding is set. Its
-hooks should stop receiving new work, and its injected /indexnow-key.txt route
-should return 404. An existing independently owned key file or route keeps its
-own behavior. Removing the Astro wrapper or npm package alone does not run this
-Disable step.
+Closing a tab does not stop every server request. Already dispatched work can
+finish, and disabling cannot recall a provider request. EmDash 1.3 has no
+supported scheduled-task view; make the scan/delivery checks before Disable.
 
-Gracefully stop all site application instances, workers and schedulers before
-backing up or replacing dependencies. Use the site's established process to
-take a consistent database/uploads backup and retain the matching configuration,
-package manifest and lockfile, and any package archive the lockfile refers to.
-Verify restoration on an isolated copy. Do not copy a live SQLite file while a
-writer is active.
-Use a SQLite-aware backup that preserves committed WAL data; copying only the
-main database file can omit saved changes even after writers stop.
-A configuration export alone does not contain all plugin or content-owned data.
+IndexNow Off retains the public key, queue and history and can still serve
+the key file. Disabling the plugin stops its injected key route. The disabled
+SEO admin page shows a notice; saved data remains stored. Plugin API routes
+return 404.
+Removing the wrapper or dependency alone does not perform this Disable step.
 
-Keep all Shipit data, including settings and custom verification tags, templates,
-business identity, custom schemas and the schema library, overrides, analysis profiles, scores/history,
-scan state, migration/recovery records and the IndexNow key/queue/history.
-Do not delete records, reset storage or run SQL cleanup. This guide does not
-provide a data-purge operation.
+## 3. Keep a restorable backup
 
-In the existing Astro configuration, replace shipitSeo(emdash, options) with
-the original emdash(options) call. Preserve the entire options object:
-database, storage, collections, locales, other plugins, adapter and integrations.
-Remove only the Shipit import and any verified Shipit descriptor or adapter
-left by this site's installation. A branding argument goes with the wrapper;
-remove its logo files from public/ only when nothing else in the site uses them. Keep EmDash registered once. Inspect any
-handwritten Shipit route imports before removing them; preserve independently
-owned routes and files. Remove the package name from any other build setting
-that lists it, such as a Vite ssr.noExternal entry, and update site-owned links
-to the Shipit admin page under /_emdash/admin/plugins/shipit-seo/. After
-removal that address shows EmDash's "Plugin Error" message, "Plugin responded
-with 404", followed by the raw JSON response, not a not-found page.
+Gracefully stop every application instance, worker and scheduler. Back up
+the consistent database/uploads state with the matching configuration,
+manifest, lockfile and any package archive referenced by it. Verify restoration
+on a copy. For SQLite, include committed WAL data rather than copying only the
+main database.
 
-Keep EmDashHead, its correct page/content context, body hooks and the theme's
-title integration. These remain part of the site's EmDash setup.
+Retain all content and plugin records, including identity, templates, custom
+schemas, Library, profiles, scores/history, migration records and IndexNow
+keys/queues/history. A configuration export omits some of these records and
+is not a full backup.
 
-Use the site's existing package manager to remove only this dependency:
-  pnpm remove @shipitseo/emdash-plugin-seo
-For npm, use npm uninstall @shipitseo/emdash-plugin-seo; removal and
-reinstallation with npm are not verified for this release, so report that and
-review the lockfile diff before continuing. Use the equivalent command for
-another package manager. Update its existing lockfile through that command and
-keep other dependencies; do not create another lockfile.
+## 4. Remove the integration and dependency
 
-Run the site's relevant checks and production build, then restart locally.
-Verify:
-- Shipit SEO is absent from the admin and no Shipit package import remains.
-- The intended public title, description, canonical, social metadata, robots
-  directives and JSON-LD come from the remaining owners without duplicates.
-- /sitemap.xml and child files reflect their remaining owner. EmDash's sitemap
-  can differ from Shipit's saved selection; review private/noindex exclusions.
-- /robots.txt retains the intended core or independently owned rules.
-- Absolute URLs in EmDash's sitemap and robots.txt use EmDash's stored site
-  URL; confirm that it names the intended public origin.
-- /llms.txt and /indexnow-key.txt reflect their remaining route/file owner.
-  Shipit's injected key route should be absent after rebuilding.
-- Existing EmDash redirects and core entry SEO still work.
-- Retained plugin records, content and uploads remain available for recovery.
+Restore the original EmDash call, preserving every existing option:
 
-Use the site's established cache invalidation process when needed. A response
-already cached by a browser or CDN can outlive the configuration change.
-Do not claim that removing the package immediately clears every public cache.
-
-Reinstallation reuses retained data and can retain the inactive state; while
-inactive, the SEO admin page shows only the disabled notice and its API routes
-return 404, so EmDash 1.3 offers no supported way to review the retained
-settings or IndexNow queue before Enable. Enable resumes the retained settings
-and scheduled work at once: content scoring, IndexNow delivery and automatic
-submission run again if they were left on, and a scan left running can continue.
-The steps above save them off before removal, which prevents that. If they
-were not saved off, open Content health, Feature controls and IndexNow
-immediately after Enable: stop the scan, choose Pause automatic & bulk and turn
-automatic submission and IndexNow delivery off before anything else. Then
-review the retained settings and queue before deliberately resuming any of
-them. Do not promise a fresh installation, empty queue or restored output
-without checking.
-
-If removal fails, keep the site stopped while reconciling the result. Restore
-the matching package manifest, lockfile and configuration through the tested
-recovery process. Restore database/uploads only from the matching consistent
-backup if data recovery is required. With SQLite, move the current database
-file and its -wal and -shm files aside together before putting the backup in
-place; a -wal file left beside a restored database is replayed over it.
-Reinstalling a package alone does not reverse data changes or automatically
-enable the plugin.
-
-Report the files changed, exact versions and checks, confirmed disabled state,
-backup/recovery evidence, retained data and observed public fallback behavior.
-Describe any outstanding operation whose completion could not be confirmed.
-Do not publish, deploy, remove production installations, purge data or submit
-IndexNow requests as part of this task.
+```diff
+- shipitSeo(emdash, options)
++ emdash(options)
 ```
+
+Remove only the Shipit import and verified Shipit-specific adapters or build
+settings. Keep EmDash registered once, its complete options, adapter,
+database, storage, collections, locales and other plugins.
+
+If templates use taxonomyArchivePage, remove its import and wrapper while
+retaining the underlying custom page context, EmDashHead, archive route and
+content. Keep body hooks and the theme's title integration. Remove branding
+logo files only if nothing else uses them.
+
+For a pnpm site:
+
+```sh
+pnpm remove @shipitseo/emdash-plugin-seo
+```
+
+For npm, use this instead. npm removal and reinstallation remain unverified
+for this beta; rehearse them on a copy and review the lockfile:
+
+```sh
+npm uninstall @shipitseo/emdash-plugin-seo
+```
+
+Keep one lockfile and remove no unrelated dependency. Do not use a registry
+plugin's Delete data flow for this native package.
+
+## 5. Build and verify
+
+Run the site's checks and production build, restart, then confirm:
+
+- Shipit is absent from the admin and no package import remains.
+- Remaining owners supply the intended title, description, canonical, social
+  values, robots directives and JSON-LD without duplicates.
+- Sitemaps retain the intended private/noindex exclusions. Check the remaining
+  ownership of robots.txt, llms.txt and indexnow-key.txt.
+- Native SEO, redirects, content and uploads remain available.
+- Plugin data remains stored for recovery.
+
+Use the normal hosting cache invalidation procedure. Cached responses can
+outlive a configuration change.
+
+## Reinstall or recover
+
+Reinstallation reuses retained records and can keep the plugin inactive.
+EmDash 1.3 offers no supported inspection of the retained settings or queue
+before Enable. Enabling immediately resumes saved settings and scheduled work,
+so the steps above turn optional work off before removal.
+
+If work was left on, stop scans, automatic/bulk analysis and IndexNow delivery
+immediately after Enable, then review settings and queues before deliberately
+resuming them. Do not promise a fresh installation or empty queue.
+
+If removal fails, keep the site stopped and restore the matching package
+manifest, lockfile and configuration. Restore database/uploads only when
+needed, using the matching consistent backup. With SQLite, move the failed
+database, -wal and -shm files aside together before restoration, and account
+for later writes. Reinstalling a dependency alone does not restore data or
+automatically enable the plugin. See [UPGRADE.md](UPGRADE.md#recover-a-failed-update).
