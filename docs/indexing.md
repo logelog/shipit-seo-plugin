@@ -50,26 +50,9 @@ process its queue.
 | Accepted, HTTP 202 | The request was accepted while key validation is pending |
 | Failed or retry scheduled | Inspect the recorded response and configuration before another deliberate action |
 
-A timeout can leave delivery uncertain: the provider may have received the
-request even when the plugin did not receive its response. Avoid repeatedly
-submitting unchanged URLs to obtain a different search or dashboard result.
-
-## Check Bing separately
-
-In Bing Webmaster Tools, select the property matching the submitted public
-host and open **IndexNow Insights**. Use **URL Inspection** for an individual
-page's index status. Submission, crawling and indexing are separate results;
-the plugin's HTTP response is not an account-side report or an indexing date.
-
-If a URL is absent from the report, compare the selected property with the
-expanded URL list in the plugin. An HTTP 200 response confirms receipt; it
-cannot explain a missing account-side report on its own. Do not resend solely
-because the report or search results are empty.
-
-See the [IndexNow documentation](https://www.indexnow.org/documentation) for
-provider responses and the
-[Bing IndexNow Insights guide](https://blogs.bing.com/webmaster/2024/3/Optimize-your-Impact-with-IndexNow-Insights/)
-for reporting.
+Neither Sent nor Accepted confirms crawling or indexing. A timeout can leave
+delivery uncertain: the provider may have received the request even when the
+plugin did not receive its response.
 
 ## Enable automatic submission deliberately
 

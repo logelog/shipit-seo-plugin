@@ -32,8 +32,8 @@ For `0.4.0-beta.55`, the completed checks cover:
 
 These live checks were completed on 23 October 2026. Automatic IndexNow
 settings persisted after reload; delivery triggered by a real CMS content
-event still needs verification. Provider receipt does not establish crawling,
-indexing or visibility in Bing Webmaster Tools.
+event still needs verification. Provider receipt does not establish crawling
+or indexing.
 
 Full native 1.3.1 verification, every lifecycle UI flow, native SEO dirty-draft
 and lost-acknowledgement recovery, full editor locale switching, and npm
