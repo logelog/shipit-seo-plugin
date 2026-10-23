@@ -245,7 +245,15 @@ and Google does not participate in IndexNow.
 Turning delivery off retains its key, settings, queue and history. Already
 dispatched requests can still finish, and a timeout cannot prove whether the
 provider received them. Review retained work before re-enabling.
-Live provider delivery remains unverified for this beta.
+
+Review **Submission history** for the URL list, source, last attempt and HTTP
+result. **Sent** means HTTP 200; **Accepted** means HTTP 202 with key validation
+pending. Neither status proves that a page is indexed. Refresh reads the
+history without submitting the URLs again.
+
+Live manual delivery has been verified with beta.55 on native EmDash 1.3.0
+using Node/SQLite. Automatic delivery from real CMS events still needs
+verification.
 
 ## Other SEO plugins
 
@@ -262,9 +270,9 @@ fragment or custom collector, so inspect the public page for duplicates.
 - Native Node/SQLite is the verified platform family. Full native 1.3.1
   verification, Cloudflare Workers/D1, Postgres and sandbox/registry installation
   remain unqualified.
-- Live IndexNow delivery, full locale-switching behavior of Edit SEO, and npm
-  update/removal/reinstallation have not been verified. Save or discard popup
-  edits before changing locale.
+- Automatic IndexNow delivery from real CMS events, full locale-switching
+  behavior of Edit SEO, and npm update/removal/reinstallation still need
+  verification. Save or discard popup edits before changing locale.
 - The theme owns its title, templates and competing public routes. Keep the
   correct entry/locale context and inspect anonymous output.
 - Conditional saves can conflict or have an uncertain result. Advanced robots

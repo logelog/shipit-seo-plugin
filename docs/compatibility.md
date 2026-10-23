@@ -19,6 +19,31 @@ Read that target's report with `pnpm dev:report --target native-1.3.0`.
 A mode listed here describes the runner, not a passing test or release acceptance.
 <!-- compatibility:matrix:end -->
 
+## Beta verification coverage
+
+For `0.4.0-beta.55`, the completed checks cover:
+
+| Area | Verified scope |
+| --- | --- |
+| Native 1.3.0 | Full native verification, packed npm/pnpm consumer checks and SQLite/package upgrade recovery |
+| Native 1.3.1 | Exact-archive installation, build, compiled checks and focused editor/workspace checks, including Social conflict recovery |
+| Live IndexNow | One manual batch of 11 public URLs sent through the native 1.3.0 plugin, with an HTTP 200 response |
+| Public files | A static deployment served its sitemap, robots.txt and the saved llms.txt document with HTTP 200; the sitemap listed all 11 intended pages |
+
+These live checks were completed on 23 October 2026. Automatic IndexNow
+settings persisted after reload; delivery triggered by a real CMS content
+event still needs verification. Provider receipt does not establish crawling,
+indexing or visibility in Bing Webmaster Tools.
+
+Full native 1.3.1 verification, every lifecycle UI flow, native SEO dirty-draft
+and lost-acknowledgement recovery, full editor locale switching, and npm
+update/removal/reinstallation remain unqualified. Cloudflare Workers/D1,
+Postgres and sandbox/registry installation also remain outside the verified
+platform scope. A static Cloudflare Pages deployment does not establish that
+the plugin runtime works on Workers/D1.
+
+See the [indexing guide](indexing.md) for public-output and submission checks.
+
 ## Change a target
 
 1. Add a separate fixture with its exact manifest and lockfile. Review the

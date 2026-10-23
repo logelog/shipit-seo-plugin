@@ -16,6 +16,8 @@ The command saves the resolved beta version exactly. Follow the
 the existing EmDash integration and templates, then check a published page.
 
 The [package guide](packages/emdash-plugin-seo/README.md) covers everyday use.
+Use the [indexing guide](docs/indexing.md) to check public files and IndexNow
+submission results.
 See [upgrading](packages/emdash-plugin-seo/UPGRADE.md) and
 [removal](packages/emdash-plugin-seo/UNINSTALL-PROMPT.md) before changing an
 existing installation.
