@@ -1,7 +1,7 @@
 # Upgrade Shipit SEO
 
 <!-- compatibility:package:start -->
-Version `0.4.0-beta.55` is a native beta.
+Version `0.4.0-beta.56` is a native beta.
 
 Native EmDash/admin support: **1.3.1 or 1.3.0**.
 Use Node **24.19.0**, Astro **7.3.2** and SQLite.
@@ -40,13 +40,13 @@ an unreviewed compatibility mismatch.
 For a pnpm site:
 
 ```sh
-pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.55
+pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.56
 ```
 
 For npm, use this instead; review the lifecycle limits below before proceeding:
 
 ```sh
-npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.55
+npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.56
 ```
 
 Keep one lockfile and review its diff. Retain the Astro wrapper, host adapter,
@@ -82,10 +82,15 @@ build. Earlier local archive tests do not qualify changed archives. npm
 update, removal and reinstallation remain unverified; rehearse those operations
 on a copy and inspect the lockfile before changing a real site.
 
-Full native 1.3.1 verification is incomplete. Full native 1.3.0 verification
-and focused 1.3.1 installation/build/UI checks have different scope.
-Cloudflare Workers/D1, Postgres, sandbox/registry installation and live
-IndexNow delivery remain unverified. See [the package limits](README.md#limits).
+Beta.56 passed native 1.3.1 quick verification and focused local Workers/D1
+checks. Earlier full native 1.3.0 and focused 1.3.1 installation checks apply
+to beta.55, not every later archive. See the
+[compatibility coverage](https://github.com/logelog/shipit-seo-plugin/blob/main/docs/compatibility.md)
+and [package limits](README.md#limits) for the checked scope.
+
+Live IndexNow delivery was verified with beta.55 on native EmDash 1.3.0 using
+Node/SQLite. Workers/D1 delivery and other automatic event and retry flows
+remain unverified.
 
 Earlier @shipit-scoped alpha packages have no tested or supported migration
 path to this package. Treat that as a separate migration with its own backup

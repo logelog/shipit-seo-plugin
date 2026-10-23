@@ -29,11 +29,10 @@ Native EmDash/admin support: **1.3.1 or 1.3.0**.
 Use Node **24.19.0**, Astro **7.3.2** and SQLite.
 <!-- compatibility:support:end -->
 
-This beta is for native Node/SQLite sites. See the
-[compatibility matrix](docs/compatibility.md) for checked host combinations and
-verification coverage. Cloudflare Workers/D1, Postgres and sandbox/registry
-installation are not verified. The [package limits](packages/emdash-plugin-seo/README.md#limits)
-cover workflows that still need testing.
+Native Node/SQLite is the primary environment. Workers/D1 has experimental
+coverage for bulk analysis, large content filters and sitemaps. See the
+[compatibility matrix](docs/compatibility.md) for checked versions and remaining
+limits. Postgres and sandbox/registry installation remain unverified.
 
 ## Contribute
 

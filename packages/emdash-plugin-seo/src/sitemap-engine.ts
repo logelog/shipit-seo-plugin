@@ -229,6 +229,12 @@ export function sitemapPatternIsUnique(collection: { key: string; urlPattern: st
 	return ROW_TOKEN.test(effectivePattern(collection));
 }
 
+/** A fixed public path can be used only after checking its current rows. */
+export function sitemapPatternIsConstant(collection: { key: string; urlPattern: string | null }): boolean {
+	const pattern = effectivePattern(collection);
+	return !/[{}]/.test(pattern) && normalizeSeoSitemapPath(pattern) !== null;
+}
+
 function literalKey(segment: string): string {
 	return sitemapPathKey(`/${segment}`).slice(1);
 }

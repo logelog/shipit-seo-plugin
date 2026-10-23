@@ -20,6 +20,7 @@ import {
 	sitemapPageSize,
 	sitemapPathKey,
 	sitemapPatternIsUnique,
+	sitemapPatternIsConstant,
 	sitemapPlan,
 	sitemapRouteOverlaps,
 	type SitemapDecisionContext,
@@ -86,6 +87,11 @@ assert.deepEqual(resolveSitemapSelection(collections, { pages: false, services: 
 assert.equal(sitemapPatternIsUnique({ key: "pages", urlPattern: "/about" }), false);
 assert.equal(sitemapPatternIsUnique({ key: "archive", urlPattern: "/{year}/{month}" }), false);
 assert.equal(sitemapPatternIsUnique({ key: "posts", urlPattern: null }), true);
+assert.equal(sitemapPatternIsConstant({ key: "home", urlPattern: "/" }), true);
+assert.equal(sitemapPatternIsConstant({ key: "landing", urlPattern: "/campaign" }), true);
+for (const pattern of [null, "/{year}", "/{year}/{month}", "/{slug}", "/{broken", "/x?query", "/../x", "//other.example"]) {
+	assert.equal(sitemapPatternIsConstant({ key: "home", urlPattern: pattern }), false);
+}
 assert.deepEqual(sitemapRouteOverlaps(collections, plain), []);
 assert.equal(sitemapRouteOverlaps([{ key: "pages", urlPattern: "/{slug}" }, { key: "posts", urlPattern: "/{slug}" }], plain).length, 1);
 assert.equal(sitemapRouteOverlaps([{ key: "pages", urlPattern: "/{slug}" }, { key: "posts", urlPattern: "/blog/{slug}" }], plain).length, 0);

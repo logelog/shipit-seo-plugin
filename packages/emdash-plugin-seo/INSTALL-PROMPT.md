@@ -31,13 +31,13 @@ See [the package limits](README.md#limits).
 For an npm site:
 
 ```sh
-npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.55
+npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.56
 ```
 
 For a pnpm site, use this instead:
 
 ```sh
-pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.55
+pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.56
 ```
 
 Use one package manager and one lockfile. Review the dependency changes;

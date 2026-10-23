@@ -36,6 +36,9 @@ import {
 	sitemapLocalesRouted,
 	sitemapPageSize,
 	sitemapPatternIsUnique,
+	sitemapPatternIsConstant,
+	resolveSitemapRoute,
+	sitemapPathKey,
 	sitemapRouteOverlaps,
 	type SitemapAlternate,
 	type SitemapCollectionInfo,
@@ -248,7 +251,10 @@ interface SitemapState {
 	collectionsAvailable: boolean;
 	collections: SitemapCollectionInfo[];
 	effective: EffectiveSitemapValues;
+	constantRoutes: Map<string, ConstantRouteSafety>;
 }
+
+type ConstantRouteSafety = "unique" | "conflict" | "unavailable";
 
 async function sitemapState(ctx: PluginContext, host: SitemapHost | null): Promise<SitemapState> {
 	const [snapshot, moduleFlag, files, discovered] = await Promise.all([
@@ -267,6 +273,7 @@ async function sitemapState(ctx: PluginContext, host: SitemapHost | null): Promi
 		collectionsAvailable: discovered.available,
 		collections: discovered.collections,
 		effective: effectiveSitemapValues(discovered.collections, snapshot.record),
+		constantRoutes: new Map(),
 	};
 }
 
@@ -284,15 +291,85 @@ function listedCollections(state: SitemapState): SitemapCollectionInfo[] {
 	return selectedCollections(state).filter((collection) => !ruled.has(collection.key));
 }
 
+function constantRouteRowsAreUnique(
+	collection: SitemapCollectionInfo,
+	routing: SitemapRouting,
+	locales: ReadonlySet<string>,
+	rows: readonly SitemapSourceRow[],
+	limit: number,
+): boolean {
+	if (!locales.size || !Array.isArray(rows) || rows.length > limit) throw new Error("Invalid constant route candidates.");
+	const seenLocales = new Set<string>();
+	const paths = new Set<string>();
+	let previous: string | null = null;
+	let unique = true;
+	for (const row of rows) {
+		if (!row || typeof row.id !== "string" || !row.id || row.id !== row.id.trim() || row.id.length > 128 ||
+			/[\u0000-\u001f\u007f]/.test(row.id) || (previous !== null && row.id <= previous) ||
+			typeof row.slug !== "string" || !row.slug.trim() || typeof row.locale !== "string" ||
+			!locales.has(row.locale)) throw new Error("Invalid constant route candidate.");
+		previous = row.id;
+		const route = resolveSitemapRoute({
+			pattern: collection.urlPattern, collection: collection.key, slug: row.slug,
+			id: row.id, locale: row.locale, publishedAt: row.publishedAt,
+		}, routing);
+		if (route.path === null) throw new Error("A constant route could not be resolved.");
+		const path = sitemapPathKey(route.path);
+		if (seenLocales.has(row.locale) || paths.has(path)) unique = false;
+		seenLocales.add(row.locale);
+		paths.add(path);
+	}
+	return unique;
+}
+
+/**
+ * One extra candidate beyond the accepted locale count is enough to detect
+ * shared constant addresses. This is a fresh bounded read, not a snapshot
+ * shared with later file planning or rendering.
+ */
+async function readConstantRouteSafety(
+	ctx: PluginContext,
+	host: SitemapHost | null,
+	collections: readonly SitemapCollectionInfo[],
+): Promise<Map<string, ConstantRouteSafety>> {
+	const constants = collections.filter(sitemapPatternIsConstant);
+	const result = new Map<string, ConstantRouteSafety>();
+	if (!constants.length) return result;
+	if (!host) return new Map(constants.map((collection) => [collection.key, "unavailable"]));
+	let source: SitemapSource;
+	try {
+		source = await host.openSource();
+	} catch {
+		return new Map(constants.map((collection) => [collection.key, "unavailable"]));
+	}
+	const filter = sourceFilter(ctx, host);
+	const locales = new Set(filter.locales);
+	const limit = locales.size + 1;
+	for (const collection of constants) {
+		try {
+			const rows = await source.readRows(collection.key, filter, { after: null, limit });
+			result.set(collection.key, constantRouteRowsAreUnique(collection, routingFor(host), locales, rows, limit) ? "unique" : "conflict");
+		} catch (error) {
+			ctx.log?.warn?.("seo: constant sitemap route could not be checked", { error: String(error) });
+			result.set(collection.key, "unavailable");
+		}
+	}
+	return result;
+}
+
 /** Selection problems that would advertise one address for several entries. */
-function routeProblems(collections: readonly SitemapCollectionInfo[], routing: SitemapRouting) {
+function routeProblems(
+	collections: readonly SitemapCollectionInfo[],
+	routing: SitemapRouting,
+	constants: ReadonlyMap<string, ConstantRouteSafety> = new Map(),
+) {
 	return {
-		notUnique: collections.filter((collection) => !sitemapPatternIsUnique(collection)),
+		notUnique: collections.filter((collection) => !sitemapPatternIsUnique(collection) && constants.get(collection.key) !== "unique"),
 		overlaps: sitemapRouteOverlaps(collections, routing),
 	};
 }
 
-function stateAvailability(state: SitemapState): SeoSitemapAvailability {
+async function stateAvailability(ctx: PluginContext, host: SitemapHost | null, state: SitemapState): Promise<SeoSitemapAvailability> {
 	if (state.owner !== "shipit") return "not-owned";
 	if (state.snapshot.state === "corrupt") return "settings-corrupt";
 	if (state.snapshot.state === "unavailable" || state.moduleFlag.state === "unavailable" ||
@@ -303,7 +380,10 @@ function stateAvailability(state: SitemapState): SeoSitemapAvailability {
 	if (state.files.noindex) return "site-noindex";
 	if (!state.files.origin) return "no-origin";
 	if (!state.collectionsAvailable) return "source-unavailable";
-	const problems = routeProblems(selectedCollections(state), state.routing);
+	const selected = selectedCollections(state);
+	state.constantRoutes = await readConstantRouteSafety(ctx, host, selected);
+	if ([...state.constantRoutes.values()].includes("unavailable")) return "source-unavailable";
+	const problems = routeProblems(selected, state.routing, state.constantRoutes);
 	if (problems.notUnique.length || problems.overlaps.length) return "route-conflict";
 	return "ready";
 }
@@ -346,7 +426,7 @@ async function planSelected(ctx: PluginContext, host: SitemapHost, state: Sitema
 
 export async function buildSitemapAdmin(ctx: PluginContext, host: SitemapHost | null): Promise<SeoAdminSitemapConfiguration> {
 	const state = await sitemapState(ctx, host);
-	let availability = stateAvailability(state);
+	let availability = await stateAvailability(ctx, host, state);
 	let plan: SeoAdminSitemapFilePlan[] | null = null;
 	if (host && availability === "ready") {
 		try {
@@ -355,6 +435,12 @@ export async function buildSitemapAdmin(ctx: PluginContext, host: SitemapHost | 
 			ctx.log?.warn?.("seo: sitemap source could not be planned", { error: String(error) });
 			availability = "source-unavailable";
 		}
+	}
+	// Unselected fixed paths need a fresh check too, so a valid singleton
+	// collection can be selected without changing its URL pattern.
+	if (host && (availability === "ready" || availability === "route-conflict")) {
+		const unselected = state.collections.filter((collection) => !state.effective.selected.has(collection.key));
+		for (const [key, safety] of await readConstantRouteSafety(ctx, host, unselected)) state.constantRoutes.set(key, safety);
 	}
 	const kv = ctx.kv as PluginContext["kv"] & VersionedKv;
 	const conditional = typeof kv.getVersioned === "function" && typeof kv.compareAndSet === "function" &&
@@ -376,7 +462,7 @@ export async function buildSitemapAdmin(ctx: PluginContext, host: SitemapHost | 
 			label: collection.label,
 			source: state.effective.sources.get(collection.key) ?? "default",
 			urlPattern: collection.urlPattern,
-			unique: sitemapPatternIsUnique(collection),
+			unique: sitemapPatternIsUnique(collection) || state.constantRoutes.get(collection.key) === "unique",
 		})),
 		values: state.effective.values,
 		preservedKeys: state.effective.preservedKeys,
@@ -450,10 +536,18 @@ export async function saveSitemapSettings(
 	const chosen = effectiveSitemapValues(discovered.collections, {
 		version: SEO_ADMIN_SITEMAP_STORAGE_VERSION, updatedAt: "", values: validation.values,
 	});
-	const problems = routeProblems(discovered.collections.filter((item) => chosen.selected.has(item.key)), host ? routingFor(host) : { trailingSlash: "ignore", i18n: null });
+	const selected = discovered.collections.filter((item) => chosen.selected.has(item.key));
+	const constants = await readConstantRouteSafety(ctx, host, selected);
+	if ([...constants.values()].includes("unavailable")) {
+		return { success: false, errors: { _form: "Published entries could not be checked for fixed sitemap addresses. Nothing was saved." } };
+	}
+	const problems = routeProblems(selected, host ? routingFor(host) : { trailingSlash: "ignore", i18n: null }, constants);
 	const label = (key: string) => discovered.collections.find((item) => item.key === key)?.label ?? key;
 	if (problems.notUnique.length) {
-		return { success: false, errors: { contentTypes: `${problems.notUnique.map((item) => item.label).join(", ")} use a URL pattern without {slug} or {id}, so entries can share one address. Leave them out of the sitemap.` } };
+		const shared = problems.notUnique.some((item) => constants.get(item.key) === "conflict");
+		return { success: false, errors: { contentTypes: shared
+			? "A selected content type has several published entries at one fixed address. Leave it out or give its entries distinct addresses."
+			: `${problems.notUnique.map((item) => item.label).join(", ")} use a URL pattern without {slug} or {id}, so entries can share one address. Leave them out of the sitemap.` } };
 	}
 	if (problems.overlaps.length) {
 		const [left, right] = problems.overlaps[0].collections;
@@ -597,6 +691,9 @@ async function computeChild(
 	const source = await host.openSource();
 	const filter = sourceFilter(ctx, host);
 	const rows = await source.readRows(collection.key, filter, { after, limit: pageSizeFor(ctx, host) });
+	if (sitemapPatternIsConstant(collection) && !constantRouteRowsAreUnique(
+		collection, routing, new Set(filter.locales), rows, pageSizeFor(ctx, host),
+	)) throw new Error("Published entries share a fixed sitemap address.");
 	if (!rows.length) return null;
 	const overrides = { exists: null as boolean | null };
 	const decisionContext = {
@@ -637,7 +734,7 @@ export async function previewSitemapFile(
 ): Promise<SeoAdminSitemapPreview> {
 	try {
 		const state = await sitemapState(ctx, host);
-		const availability = stateAvailability(state);
+		const availability = await stateAvailability(ctx, host, state);
 		if (!host || availability !== "ready") {
 			return { success: false, errors: { _form: PREVIEW_UNAVAILABLE[availability] } };
 		}
@@ -751,7 +848,7 @@ export async function serveSitemapFile(
 		const state = await sitemapState(ctx, host);
 		if (state.owner !== "shipit") return { pass: true };
 		if (file === null) return textResponse(404, "Sitemap file not found.");
-		const availability = stateAvailability(state);
+		const availability = await stateAvailability(ctx, host, state);
 		if (availability !== "ready" && availability !== "site-noindex") {
 			ctx.log?.warn?.("seo: sitemap unavailable", { availability });
 			return textResponse(503, "The sitemap is temporarily unavailable.", 300);

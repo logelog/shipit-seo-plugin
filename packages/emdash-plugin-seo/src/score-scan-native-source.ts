@@ -28,6 +28,14 @@ interface Candidate {
 const COLLECTION_KEY = /^[a-z][a-z0-9_]{0,62}$/;
 const STATUSES: readonly string[] = ["all", "draft", "published", "scheduled"];
 
+// A resolved taxonomy can contain 512 groups. Bind the set as one JSON value
+// so membership, frontier and cycle checks stay below D1's 100-parameter limit.
+function textIds(db: HostDatabase, ids: readonly string[]): HostDatabase {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	return db.selectFrom((eb: any) => eb.fn("json_each", [eb.val(JSON.stringify(ids))]).as("selected_ids"))
+		.select("selected_ids.value");
+}
+
 function textKey(value: unknown, label: string): asserts value is string {
 	if (typeof value !== "string" || value.length === 0 || value.length > 256 ||
 		value.trim() !== value || /[\u0000-\u001f\u007f]/.test(value)) {
@@ -173,7 +181,7 @@ async function matchesTaxonomies(db: HostDatabase, scope: ScoreScanSourceScope, 
 		.select("taxonomy_id")
 		.where("collection", "=", scope.collection)
 		.where("entry_id", "=", row.translation_group)
-		.where("taxonomy_id", "in", groups)
+		.where("taxonomy_id", "in", textIds(db, groups))
 		.limit(groups.length)
 		.execute() as { taxonomy_id: string }[];
 	const assigned = new Set(memberships.map((membership) => membership.taxonomy_id));
@@ -240,12 +248,12 @@ export function createNativeScoreScanSource(db: HostDatabase): ScoreScanSource {
 						const children = await db.selectFrom("taxonomies")
 							.select("translation_group").distinct()
 							.where("name", "=", selection.taxonomy)
-							.where("parent_id", "in", frontier)
+							.where("parent_id", "in", textIds(db, frontier))
 							// Cycles and translated term rows cannot consume the expansion budget.
 							// eslint-disable-next-line @typescript-eslint/no-explicit-any
 							.where((eb: any) => eb.or([
 								eb("translation_group", "is", null),
-								eb("translation_group", "not in", [...seen]),
+								eb("translation_group", "not in", textIds(db, [...seen])),
 							]))
 							.limit(SCORE_SCAN_EXPANDED_TERM_LIMIT - expanded + 1)
 							.execute() as { translation_group: string | null }[];
