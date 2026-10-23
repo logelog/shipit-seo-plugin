@@ -21,6 +21,19 @@ A mode listed here describes the runner, not a passing test or release acceptanc
 
 ## Beta verification coverage
 
+### 0.4.0-beta.56
+
+| Environment | Checked scope |
+| --- | --- |
+| Native EmDash/admin 1.3.1 on Node/SQLite | Build, types and selfchecks through quick verification |
+| Local Workers/D1 with EmDash and Cloudflare adapter 1.3.1 | Atomic bulk-analysis updates, bounded taxonomy/internal-link queries and sitemap output, including fixed routes, canonical/noindex rules and locale conflicts |
+
+The Workers checks used the real local runtime, native D1 adapter and host
+repositories. They cover the affected engine paths, not a complete packaged
+site or hosted deployment. Workers/D1 remains experimental.
+
+### 0.4.0-beta.55
+
 For `0.4.0-beta.55`, the completed checks cover:
 
 | Area | Verified scope |
@@ -37,10 +50,10 @@ receipt does not establish crawling or indexing.
 
 Full native 1.3.1 verification, every lifecycle UI flow, native SEO dirty-draft
 and lost-acknowledgement recovery, full editor locale switching, and npm
-update/removal/reinstallation remain unqualified. Cloudflare Workers/D1,
-Postgres and sandbox/registry installation also remain outside the verified
-platform scope. A static Cloudflare Pages deployment does not establish that
-the plugin runtime works on Workers/D1.
+update/removal/reinstallation remain unqualified. Workers/D1 needs separate
+hosted admin, lifecycle and provider-delivery checks. Postgres and
+sandbox/registry installation remain unverified. A static Cloudflare Pages
+deployment does not establish Workers/D1 runtime compatibility.
 
 See the [indexing guide](indexing.md) for public-output and submission checks.
 

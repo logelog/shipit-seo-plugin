@@ -4,7 +4,7 @@ Search and social metadata, content checks, structured data, Local SEO and
 indexing tools for native EmDash sites.
 
 <!-- compatibility:package:start -->
-Version `0.4.0-beta.55` is a native beta.
+Version `0.4.0-beta.56` is a native beta.
 
 Native EmDash/admin support: **1.3.1 or 1.3.0**.
 Use Node **24.19.0**, Astro **7.3.2** and SQLite.
@@ -20,13 +20,13 @@ Shipit runs in the trusted host process; it does not provide sandbox isolation.
 Use the package manager and lockfile your site already uses. For npm:
 
 ```sh
-npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.55
+npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.56
 ```
 
 For pnpm, use this instead:
 
 ```sh
-pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.55
+pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.56
 ```
 
 Import the wrapper in the existing Astro configuration:
@@ -267,9 +267,10 @@ fragment or custom collector, so inspect the public page for duplicates.
 
 ## Limits
 
-- Native Node/SQLite is the verified platform family. Full native 1.3.1
-  verification, Cloudflare Workers/D1, Postgres and sandbox/registry installation
-  remain unqualified.
+- Workers/D1 coverage is experimental; see the
+  [compatibility coverage](https://github.com/logelog/shipit-seo-plugin/blob/main/docs/compatibility.md)
+  for checked versions and flows. Full native 1.3.1 verification, Postgres and
+  sandbox/registry installation remain unqualified.
 - Other automatic IndexNow event and retry flows, full locale-switching
   behavior of Edit SEO, and npm update/removal/reinstallation still need
   verification. Save or discard popup edits before changing locale.

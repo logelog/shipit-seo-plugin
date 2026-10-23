@@ -9,6 +9,7 @@ import {
 	portableSitemapSeoUrls,
 	type SitemapSource,
 	type SitemapSourceRow,
+	type SitemapRouting,
 } from "./sitemap-engine.ts";
 import { SITEMAP_SETTINGS_KEY, readSitemapPortableValues, type SitemapHost } from "./sitemap-runtime.ts";
 
@@ -92,14 +93,14 @@ const COLLECTIONS = [
 	{ slug: "forms", label: "Form submissions", labelSingular: "Submission", hasSeo: false, urlPattern: null, routable: false, hidden: true },
 ];
 
-function harness(options: { collections?: typeof COLLECTIONS; rows?: Row[]; owner?: "shipit" | "site-route"; pageSize?: number; source?: SitemapSource; overrides?: Map<string, unknown>; siteUrl?: string; publicOrigin?: string | null } = {}) {
+function harness(options: { collections?: typeof COLLECTIONS; rows?: Row[]; owner?: "shipit" | "site-route"; pageSize?: number; source?: SitemapSource; overrides?: Map<string, unknown>; siteUrl?: string; publicOrigin?: string | null; routing?: SitemapRouting } = {}) {
 	const store = versionedKv();
 	store.values.set("settings:noindex", { value: false, revision: "r0" });
 	const calls: string[] = [];
 	const overrideCalls: string[] = [];
 	const overrides = options.overrides ?? new Map<string, unknown>();
 	const host: SitemapHost = {
-		installation: { owner: options.owner ?? "shipit", detail: options.owner === "site-route" ? "src/pages/sitemap.xml.ts" : null, routing: { trailingSlash: "ignore", i18n: null } },
+		installation: { owner: options.owner ?? "shipit", detail: options.owner === "site-route" ? "src/pages/sitemap.xml.ts" : null, routing: options.routing ?? { trailingSlash: "ignore", i18n: null } },
 		seoUrls: portableSitemapSeoUrls,
 		...(options.publicOrigin !== undefined ? { publicOrigin: options.publicOrigin } : {}),
 		openSource: async () => options.source ?? memorySource(options.rows ?? [], calls),
@@ -233,14 +234,105 @@ const shared = harness({ collections: [
 	...COLLECTIONS.slice(0, 2),
 	{ slug: "landing", label: "Landing", labelSingular: "Landing", hasSeo: true, urlPattern: "/campaign", routable: true, hidden: false },
 	{ slug: "topics", label: "Topics", labelSingular: "Topic", hasSeo: true, urlPattern: "/pages/{slug}", routable: true, hidden: false },
-] });
-assert.match((await shared.call("save-admin-sitemap", { contentTypes: { landing: true }, excludedPaths: [], expectedRevision: null })).errors.contentTypes, /without \{slug\} or \{id\}/);
+], rows: [row("landing", "01"), row("landing", "02")] });
+assert.match((await shared.call("save-admin-sitemap", { contentTypes: { landing: true }, excludedPaths: [], expectedRevision: null })).errors.contentTypes, /one fixed address/);
 assert.match((await shared.call("save-admin-sitemap", { contentTypes: { topics: true }, excludedPaths: [], expectedRevision: null })).errors.contentTypes, /same address/);
 shared.store.values.set(SITEMAP_SETTINGS_KEY, { value: { version: 1, updatedAt: "2026-10-01T00:00:00.000Z", values: { contentTypes: { topics: true }, excludedPaths: [] } }, revision: "x" });
 const conflicted = await shared.call("admin-sitemap");
 assert.equal(conflicted.availability, "route-conflict");
 assert.deepEqual(conflicted.overlaps, [{ collections: ["pages", "topics"] }]);
 assert.equal((await shared.call("sitemap", {})).status, 503);
+
+// Fixed collection paths are proven from current public candidates, not their
+// names or a custom singleton field. Reads never persist that proof.
+const homeDefinition = { slug: "home", label: "Home", labelSingular: "Home", hasSeo: true, urlPattern: "/", routable: true, hidden: false };
+const homeRows = [row("home", "01", { slug: "home" })];
+const fixed = harness({ collections: [...COLLECTIONS, homeDefinition], rows: homeRows });
+const fixedAdmin = await fixed.call("admin-sitemap");
+assert.equal(fixedAdmin.groups.find((group: any) => group.key === "home").unique, true,
+	"a currently unique unselected fixed path can be selected");
+assert.equal(fixedAdmin.values.contentTypes.home, false);
+const fixedSave = await fixed.call("save-admin-sitemap", { contentTypes: { home: true }, excludedPaths: [], expectedRevision: null });
+assert.equal(fixedSave.success, true);
+assert.equal((await fixed.call("sitemap", {})).body.includes("sitemap-home.xml"), true);
+const fixedChild = await fixed.call("sitemap", { collection: "home" });
+assert.equal(fixedChild.status, 200);
+assert.equal((fixedChild.body.match(/<loc>https:\/\/example.com\/<\/loc>/g) ?? []).length, 1);
+assert.equal((await fixed.call("preview-admin-sitemap", { collection: "home", after: null })).entries[0].url, "https://example.com/");
+
+homeRows.push(row("home", "02", { slug: "second" }));
+assert.equal((await fixed.call("sitemap", {})).status, 503, "the index rechecks after a second entry is published");
+assert.equal((await fixed.call("sitemap", { collection: "home" })).status, 503, "the child rechecks independently");
+assert.equal((await fixed.call("admin-sitemap")).groups.find((group: any) => group.key === "home").unique, false);
+homeRows.pop();
+assert.equal((await fixed.call("sitemap", { collection: "home" })).status, 200);
+const beforeReadWrites = fixed.store.writes;
+await fixed.call("admin-sitemap");
+await fixed.call("sitemap", {});
+assert.equal(fixed.store.writes, beforeReadWrites);
+
+// Rows that resolve to different locale paths can coexist; alias locale
+// codes resolving to one prefix still conflict.
+const multilingual = harness({
+	collections: [homeDefinition],
+	rows: [row("home", "01", { slug: "home" }), row("home", "02", { slug: "accueil", locale: "fr" })],
+	routing: { trailingSlash: "always", i18n: { defaultLocale: "en", locales: ["en", "fr"], prefixDefaultLocale: false } },
+});
+assert.equal((await multilingual.call("save-admin-sitemap", { contentTypes: { home: true }, excludedPaths: [], expectedRevision: null })).success, true);
+const localizedChild = await multilingual.call("sitemap", { collection: "home" });
+assert.equal(localizedChild.status, 200);
+assert.ok(localizedChild.body.includes("<loc>https://example.com/</loc>"));
+assert.ok(localizedChild.body.includes("<loc>https://example.com/fr/</loc>"));
+const aliases = harness({
+	collections: [homeDefinition],
+	rows: [row("home", "01", { locale: "es" }), row("home", "02", { locale: "es-ES" })],
+	routing: { trailingSlash: "ignore", i18n: { defaultLocale: "en", locales: ["en", { path: "spanish", codes: ["es", "es-ES"] }], prefixDefaultLocale: false } },
+});
+assert.match((await aliases.call("save-admin-sitemap", { contentTypes: { home: true }, excludedPaths: [], expectedRevision: null })).errors.contentTypes, /one fixed address/);
+
+// The fixed-path probe is bounded to L+1 rows, including large collections.
+// Malformed or failed projected reads cannot authorize a save or response.
+for (const answer of [
+	[row("home", "01"), row("home", "02"), row("home", "03")],
+	[row("home", "01", { locale: "fr" })],
+	[row("home", "01"), row("home", "01")],
+	[null],
+	"unreadable",
+	new Error("read failed"),
+]) {
+	const malformed = harness({ collections: [homeDefinition], source: {
+		planFiles: async () => { throw new Error("No planning after a failed proof."); },
+		readRows: async (_collection, filter, range) => {
+			assert.deepEqual(filter.locales, ["en"]);
+			assert.equal(range.limit, 2);
+			assert.equal(range.after, null);
+			if (answer instanceof Error) throw answer;
+			return answer as any;
+		},
+		readGroups: async () => [],
+	} });
+	assert.equal((await malformed.call("admin-sitemap")).groups[0].unique, false);
+	assert.equal((await malformed.call("save-admin-sitemap", { contentTypes: { home: true }, excludedPaths: [], expectedRevision: null })).success, false);
+	assert.equal(malformed.store.writes, 0);
+	malformed.store.values.set(SITEMAP_SETTINGS_KEY, { value: { version: 1, updatedAt: "2026-10-01T00:00:00.000Z", values: { contentTypes: { home: true }, excludedPaths: [] } }, revision: "x" });
+	assert.equal((await malformed.call("sitemap", {})).status, 503);
+	assert.equal((await malformed.call("sitemap", { collection: "home" })).status, 503);
+}
+
+const changingSource = harness({ collections: [homeDefinition], source: {
+	planFiles: async () => ({ rowCount: 1, cursors: [null] }),
+	readRows: async (_collection, _filter, range) => range.limit === 2
+		? [row("home", "01")] : [row("home", "01"), row("home", "02")],
+	readGroups: async () => [],
+} });
+changingSource.store.values.set(SITEMAP_SETTINGS_KEY, { value: { version: 1, updatedAt: "2026-10-01T00:00:00.000Z", values: { contentTypes: { home: true }, excludedPaths: [] } }, revision: "x" });
+assert.equal((await changingSource.call("sitemap", { collection: "home" })).status, 503,
+	"a new duplicate observed during child rendering is not partially advertised");
+
+const fixedOverlap = harness({ collections: [homeDefinition, { ...homeDefinition, slug: "landing", label: "Landing" }], rows: [row("home", "01"), row("landing", "02")] });
+assert.match((await fixedOverlap.call("save-admin-sitemap", { contentTypes: { home: true, landing: true }, excludedPaths: [], expectedRevision: null })).errors.contentTypes, /same address/);
+const dateOnly = harness({ collections: [{ ...homeDefinition, urlPattern: "/{year}" }], rows: [row("home", "01")] });
+assert.match((await dateOnly.call("save-admin-sitemap", { contentTypes: { home: true }, excludedPaths: [], expectedRevision: null })).errors.contentTypes, /without \{slug\} or \{id\}/);
 
 // Keyset files, noindex, missing SEO and SEO-only lastmod in public XML.
 const many = harness({

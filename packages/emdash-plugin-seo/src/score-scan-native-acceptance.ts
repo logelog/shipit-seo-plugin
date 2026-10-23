@@ -3,6 +3,7 @@ import type { PluginContext } from "emdash";
 import type { ScoreScanAcceptance } from "./score-scan.ts";
 import { GLOBAL_SETTINGS_KEY } from "./settings-runtime.ts";
 import { collectionAnalysisProfileKey } from "./collection-analysis-profile.ts";
+import { NativeAtomicScoreScanPlan, nativeAtomicBatchAdapter } from "./score-scan-native-atomic.ts";
 
 /** The collections a terminal acceptance reads or writes inside its transaction. */
 export const SCORE_SCAN_ACCEPTANCE_COLLECTIONS = ["scores", "scoreAnalysisRevisions", "scoreScanJobs"] as const;
@@ -43,11 +44,10 @@ function refused(access: string): Error {
 }
 
 /**
- * A context whose every port is bound to `trx`: the policy settings record
- * through the host settings decoder, exact content reads with their version
- * fields, and the three acceptance collections. Nothing else exists on it.
+ * Only terminal acceptance ports exist here. SQLite binds them to its actual
+ * transaction; D1 binds uncached reads and buffered writes to an atomic plan.
  */
-function boundContext(trx: HostDatabase, options: NativeScoreScanAcceptanceOptions, collection: string): PluginContext {
+function boundContext(trx: HostDatabase, options: NativeScoreScanAcceptanceOptions, collection: string, plan?: NativeAtomicScoreScanPlan): PluginContext {
 	const { repositories: host, pluginId } = options;
 	const optionStore = new host.OptionsRepository(trx);
 	const settings = host.createSettingsAccess(optionStore, pluginId);
@@ -56,13 +56,18 @@ function boundContext(trx: HostDatabase, options: NativeScoreScanAcceptanceOptio
 	const storage = Object.freeze(Object.fromEntries(SCORE_SCAN_ACCEPTANCE_COLLECTIONS.map((name) => {
 		const config = options.storage[name]!;
 		const indexes = [...(config.indexes ?? []), ...(config.uniqueIndexes ?? [])].map((index) => typeof index === "string" ? index : [...index]);
-		return [name, new host.PluginStorageRepository(trx, pluginId, name, indexes)];
+		const repository = new host.PluginStorageRepository(trx, pluginId, name, indexes);
+		return [name, plan ? plan.storage(name, repository as any) : repository];
 	})) as Record<AcceptanceCollection, object>);
 	const kv = Object.freeze({
 		async getVersioned(key: string): Promise<unknown> {
-			if (key === profileKey) return optionStore.getVersioned(`plugin:${pluginId}:${key}`);
+			if (key === profileKey) {
+				const name = `plugin:${pluginId}:${key}`;
+				return plan ? plan.readOption(key, name, () => optionStore.getVersioned(name)) : optionStore.getVersioned(name);
+			}
 			if (key !== GLOBAL_SETTINGS_KEY) throw refused(`kv.getVersioned:${String(key)}`);
-			return settings.getVersioned(key.slice("settings:".length));
+			const read = () => settings.getVersioned(key.slice("settings:".length));
+			return plan ? plan.readOption(key, `plugin:${pluginId}:${key}`, read) : read();
 		},
 	});
 	return Object.freeze({
@@ -70,23 +75,31 @@ function boundContext(trx: HostDatabase, options: NativeScoreScanAcceptanceOptio
 		...(options.log ? { log: options.log } : {}),
 		kv,
 		storage,
-		content: Object.freeze({ get: (collection: string, id: string) => content.get(collection, id) }),
+		content: Object.freeze({ get: (collection: string, id: string) => plan
+			? plan.readContent(collection, id, () => content.get(collection, id))
+			: content.get(collection, id) }),
 	}) as unknown as PluginContext;
 }
 
 /**
- * Terminal acceptance on one native transaction. The callback must use only
- * the bound ports: the base context uses a separate SQLite connection, whose
- * writes contend for the lock this transaction holds, so lease-managed
- * history and every base-context write run only after commit.
+ * Score and outcome receipt commit together. Lease-managed history and every
+ * base-context write run after this boundary, never through another connection
+ * while the native transaction holds its lock.
  */
 export function createNativeScoreScanAcceptance(options: NativeScoreScanAcceptanceOptions): ScoreScanAcceptance {
-	if (!options.db || typeof options.db.transaction !== "function")
+	const atomic = nativeAtomicBatchAdapter(options.db);
+	if (!options.db || (!atomic && typeof options.db.transaction !== "function"))
 		throw new Error("Native score scan acceptance requires a transactional host database");
 	for (const name of SCORE_SCAN_ACCEPTANCE_COLLECTIONS)
 		if (!options.storage[name]) throw new Error(`Native score scan acceptance requires the declared ${name} collection`);
 	return {
 		async transaction(work, scope) {
+			if (atomic) {
+				const plan = new NativeAtomicScoreScanPlan(options.db, options.pluginId, scope.collection);
+				const result = await work({ context: boundContext(plan.database, options, scope.collection, plan) });
+				await plan.commit(atomic);
+				return result;
+			}
 			const builder = options.db.transaction();
 			if (!builder || typeof builder.execute !== "function") throw new Error("Native transactions are unavailable");
 			return builder.execute(async (trx: HostDatabase) => {

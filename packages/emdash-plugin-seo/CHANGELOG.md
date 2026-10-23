@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0-beta.56
+
+- Commit a bulk-analysis score and its outcome receipt atomically on D1, with
+  revision checks for the content, settings and scan owner.
+- Keep taxonomy and internal-link queries within D1's parameter limit.
+- Include fixed content routes, such as the homepage, in sitemaps after checking
+  that each locale has a single published entry. Conflicting routes stay excluded.
+
 ## 0.4.0-beta.55
 
 Prepare the native beta with synchronized compatibility and installation

@@ -48,6 +48,13 @@ const SCOPE_VERSION_PREFIX = "link-scope-v1:sha256-";
 const ENTRY_VERSION_PREFIX = "entry-v1:";
 const TIMESTAMP_CHARS = 64;
 
+// Keep a 200-row candidate window in one statement without exceeding D1's
+// 100-parameter limit. The values stay bound and never become SQL text.
+function textIds(db: HostDatabase, ids: readonly string[]): HostDatabase {
+	return db.selectFrom((eb: ExpressionBuilder) => eb.fn("json_each", [eb.val(JSON.stringify(ids))]).as("selected_ids"))
+		.select("selected_ids.value");
+}
+
 function isIdentity(value: unknown, max: number = LINK_SUGGESTION_LIMITS.identityChars): value is string {
 	return typeof value === "string" && value.length > 0 && value.length <= max && value.trim() === value &&
 		!/[\u0000-\u001f\u007f]/u.test(value);
@@ -460,7 +467,7 @@ export function createNativeLinkCandidatePort(db: HostDatabase): LinkCandidatePo
 					const memberships = await db.selectFrom("content_taxonomies")
 						.select(["entry_id", "taxonomy_id"])
 						.where("collection", "=", selection.collection)
-						.where("entry_id", "in", [...groups])
+						.where("entry_id", "in", textIds(db, [...groups]))
 						.where("taxonomy_id", "in", definition.termGroups)
 						.limit(MEMBERSHIP_SENTINEL)
 						.execute() as Record<string, unknown>[];
