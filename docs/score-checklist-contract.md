@@ -1,37 +1,32 @@
 # Score and checklist contract (analyzer 22)
 
-Applies from `0.4.0-beta.53`. This contract supersedes earlier scoring thresholds
-and the line in `editor-popup-contract.md` that keeps checklist issues, advice,
-missing evidence and weighted calculations unchanged.
+The score is a checklist result, not a search-engine score or ranking
+prediction. One engine and presentation model serve basic browser checks,
+saved analysis, scans, Overview and the sandbox panel. Opening an entry runs
+browser checks without a provider request, scan or history write.
 
-## Scope
+The sandbox panel shares the editor's groups. The sandbox Content analyzer
+page retains a category list; full parity for that page remains planned work.
 
-Make the entry score honest and the editor checklist short. One shared engine
-and one shared presentation module serve browser checks, **Analyze this
-entry**, scans, the overview and the sandbox panel. No provider request, scan,
-history write, hosting service or translation is added. The keyword field,
-typography and light palette stay. The sandbox registry panel uses the shared
-groups; the sandbox **Content analyzer** page keeps its category list, and
-full sandbox parity for that page is a deferred roadmap item.
+## Calibration
 
-Scoring sources, read 2026-10-22:
 [Google's SEO starter guide](https://developers.google.com/search/docs/fundamentals/seo-starter-guide#things-we-believe-you-shouldnt-focus-on)
 prescribes no minimum or maximum word count.
 [Rank Math](https://rankmath.com/kb/score-100-in-tests/) gives no credit below
 600 words only for its length test, not an overall score limit.
 [Yoast skips density checks below 100 words](https://yoast.com/what-is-keyphrase-density-and-why-is-it-important/)
 and [varies word-count guidance by content type](https://yoast.com/blog-post-word-count-seo/).
-Shipit's Article 600-word pass threshold and score limit of 70 below it are
-product calibration, not a Google mandate or an exact competitor rule. The
-score is a Shipit checklist score, not a Google score or a ranking prediction.
+The Article profile's 600-word pass threshold and limit of 70 below it are
+Shipit product calibration, not a Google mandate or an exact competitor rule.
+They do not apply to the General content profile.
 
 ## Rules
 
 1. **Row words.** Scored pass: **Passed**. Scored review: **Partly met**.
    Scored fail: **Failed**. Advice review: **Suggestion**. Advice pass:
    **Passed**. Unavailable: **Not checked**. Not applicable: no row. Earlier
-   analyzer: **Earlier result**. No status value is added; each policy lists
-   its allowed outcomes and the engine refuses others.
+   analyzer: **Earlier result**. Each policy lists its allowed outcomes, and
+   the engine refuses others.
 2. **Not applicable is structural:** no focus keyword, no secondary keywords,
    no images, image alt checks off, no links, no section headings, a body
    format without links or headings, an opaque slug, no title or description
@@ -120,8 +115,8 @@ score is a Shipit checklist score, not a Google score or a ranking prediction.
 13. **Accessibility.** The ring is `role="img"` named "SEO score N out of 100"
     or "No SEO score"; rows are list items; pills and statuses are text; dark
     pills use `[data-mode="dark"]`; no live region on the score.
-14. **Versioning.** Analyzer 22 bumps the admin contract to 47, the engine version
-    to beta.53 and the comparison policy. Analyzer 21 and earlier results stay
+14. **Versioning.** Analyzer 22 uses admin contract 47 and the current
+    comparison policy. Analyzer 21 and earlier results stay
     readable in history but never render as a current number, band or meter
     and never enter current comparisons. They read **Earlier analyzer. Analyze
     again.** A scan resumed
@@ -130,23 +125,23 @@ score is a Shipit checklist score, not a Google score or a ranking prediction.
 
 ## Checks
 
-Maximum 89 points for articles and 79 for general entries. Outcomes: P pass,
-R review, F fail.
+When every weighted row applies, available points total 89 for Article and
+79 for General content. Outcomes: P pass, R review, F fail.
 
 | Group | Check | Weight, outcomes | Rule |
 | --- | --- | --- | --- |
-| Basic SEO | Title | 14, P/F | Resolved title present (Google practice) |
+| Basic SEO | Title | 14, P/F | Resolved title present |
 | Basic SEO | Description | 14, P/F | Resolved description present |
 | Basic SEO | Public URL | 8, P/F | Valid public http(s) URL |
 | Basic SEO | Body text length | article 10, P/R/F; general advice | Article: 600+ P, 300-599 R, under 300 F. General: Suggestion under 100 |
 | Basic SEO | Focus keyword | advice | Suggestion when unset |
-| Basic SEO | Keyword in title, description, body text | 4, 3, 3, P/F | Literal primary phrase (Google practice) |
+| Basic SEO | Keyword in title, description, body text | 4, 3, 3, P/F | Literal primary phrase |
 | Basic SEO | Keyword in URL, introduction, subheading | advice | URL wording notes redirects |
 | Basic SEO | Secondary keywords | advice | Each appears somewhere |
 | Additional | Social image | 8, P/R | Image set; site fallback only adds a Suggestion |
-| Additional | Image alt text | 6, P/F | Every body image has alt (Google practice) |
+| Additional | Image alt text | 6, P/F | Every body image has alt |
 | Additional | Internal links | 5, article P/F, general P/R | Excludes fragment-only and self links |
-| Additional | Link text | 3, P/R | No generic labels (Google practice) |
+| Additional | Link text | 3, P/R | No generic labels |
 | Additional | Focus keyword repetition | 4, P/F | Rule 10 |
 | Additional | Featured image, schema, canonical, empty alt | advice | Empty alt covers body images only |
 | Search snippet | Title fit, description fit, keyword visible on phones | advice | Rule 11 |
@@ -157,10 +152,10 @@ R review, F fail.
 Readability limits are Shipit guidance written for English. The indexing
 directive is not a row: an excluded entry shows the existing banner.
 
-## Acceptance
+## Regression cases
 
-Fixtures: published, canonical matching, social image set, no images unless
-stated, body as a saved Portable Text array.
+These cases assume a published entry, matching canonical, a sharing image,
+no body images unless stated, and saved Portable Text.
 
 | Case | Expected |
 | --- | --- |
@@ -196,7 +191,14 @@ scope note explains an incomplete score without suggesting that enabling
 automatic analysis or selecting a profile can make unsupported body blocks
 readable. The optional saved-analysis action belongs to Analysis options.
 
-Before acceptance, check keyboard use, light and dark themes and narrow width
-in the installed fixture. Documentation impact: architecture, README scoring
-and snippet guidance, CHANGELOG, operating cost (the first save or scan after
-upgrade re-analyzes each entry once and writes one score and one snapshot).
+## Maintainer checks
+
+Keep engine results, browser results and all displayed bands, counts and scope
+notes consistent for the same saved inputs. Exercise unavailable inputs,
+profile changes, earlier results, stale saved results and optional analysis
+off. Check keyboard use, light and dark themes and narrow widths.
+
+Owners are `analysis.ts`, `check-presentation.ts`, `score-lifecycle.ts`,
+`snippet-fit.ts` and `admin-ui/editor-basic-analysis.ts` under
+`packages/emdash-plugin-seo/src/`. See [editor layout](editor-layout-contract.md)
+and [current platform coverage](compatibility.md).

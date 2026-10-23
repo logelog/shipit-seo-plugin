@@ -1,128 +1,109 @@
 # Editor popup authoring
 
-## Scope
+Edit SEO has General, Social and Schema tabs. General edits the saved native
+SEO title and description; Social edits the native sharing image and the
+plugin's separate social text. Schema owns its own records as described in
+the [schema contract](schema-authoring-contract.md).
 
-Keep the existing General, Social and Schema popup and make its controls useful
-for everyday editing. The accepted checklist-count source and exact installed
-archive remain the baseline until this change has its own verification.
-
-- General edits the native saved SEO title and description.
-- Social can choose, replace or clear the native custom OG image. Clearing an
-  override reveals the featured image or configured fallback; it never deletes
-  a media asset or means suppressing all images. While an image change is
-  unsaved, the preview caption reads "Unsaved sharing image."; only the image
-  field's status line says what sharing uses after saving.
-- Social text retains its existing separate explicit-save and conflict contract.
-- Preview guidance must be brief. Remove the persistent About this preview
-  disclosure and developer-oriented explanations while retaining accessible full
-  metadata, useful character counts, loading/error feedback and draft status.
-- The sidebar score header uses a number only when the shared assessment admits
-  it. Otherwise show a dash and one short, accurate status. Keep checklist issues,
-  advice, missing evidence and weighted calculations unchanged.
+Native metadata saves and plugin Social saves are separate operations. Their
+controls must name the fields they save and must not imply an atomic save of
+both stores.
 
 ## Native save boundary
 
-Use only the published native 1.3 APIs and exported media picker. No host patch,
-private editor store, DOM bridge, parallel General overrides or revived legacy
-SEO records are allowed.
+The editor uses published native APIs and the exported media picker. It does
+not patch the host, access a private editor store, bridge through the DOM or
+create parallel General overrides.
 
-Native saved SEO edits are independent guarded writes: send only changed native
-fields with the observed revision and locale. Retain canonical/noindex and other
-fields. The host exposes no shared auxiliary-save controller to the extension.
-Do not claim a dirty host draft has been synchronized. Never silently reload,
-discard a parent draft, retry a stale write or adopt an unknown acknowledgement.
+Native SEO writes send only changed fields, with the observed revision and
+locale. They preserve canonical, noindex, content and unrelated metadata.
+The host has no shared auxiliary-save controller for extensions, so the
+popup cannot claim that a dirty parent draft has been synchronized.
 
-Confirm successful writes through readback. Keep draft edits and attempted
-values on timeout/conflict, offer a deliberate review path and use fresh guarded
-writes for recovery. Native metadata and plugin Social text are not one atomic
-save; controls must identify their actual save scope.
+EmDash stores these fields outside content drafts. The save note explains
+that changing a published entry's SEO fields affects the live page
+immediately, even when other content changes are still a draft. An
+unpublished entry uses the fields when it is published.
 
-- **Interrupted save.** A check that reads the attempt's own revision with the
-  pre-save values shows the write did not land: the attempt ends, the draft
-  stays, and Save SEO fields and Discard SEO edits return. A new attempt
-  carries the same guard, so if the original request commits later the host
-  refuses whichever write arrives second. The same revision with other values
-  stays uncertain. Changed values equal to the attempt are confirmed; other
-  changes open the review. Nothing retries on its own.
-- **Adopted reads.** Keep my edits, Use saved values and a check that adopts
-  newer saved values refresh the host entry and the preview once per saved
-  revision. Until the preview's ownership facts describe the adopted values,
-  every native field is read-only and reads "Updating the preview to the saved
-  values..."; the card says Updating preview.... While a review is open the
-  fields are read-only and read "Choose Keep my edits or Use saved values to
-  edit again."; the search card shows the reviewed saved title and
-  description as Saved values, since the choice, not a preview read, is
-  pending, and fields the user did not edit show the same reviewed saved
-  values. The review takes precedence over drafts, so an edited field's card
-  text is the reviewed value too. The card changes a field only while the
-  preview's ownership facts are current, for the same locale, and report that
-  no earlier SEO record holds a value for it; otherwise it keeps the reported
-  text. A cleared reviewed value shows the reported fallback, or unavailable
-  without one (`buildNativeSeoSearchPreview` in
-  `native-seo-editor-preview.ts`). The sharing card keeps the last loaded
-  preview during the review. A kept edit then saves as a fresh guarded write
-  on the reviewed revision. The note adds "Your edits are kept." only while
-  edits remain, and after a confirmed save it starts with "SEO values saved
-  and checked.". A host entry already at or past the adopted
-  revision is not refreshed again, and a refresh that brings a newer host
-  entry leaves the preview read to that entry. The preview's own read of the
-  saved entry before and after its request is part of the preview, not a
-  further host refresh.
-- **Reopened entry.** EmDash can show a cached entry when it is reopened. When
-  the preview's saved-content read reports a newer saved version, the panel
-  refreshes the host entry once for that version and shows Updating preview...
-  from the first frame until the new entry arrives, never the failure alert.
-  The preview read is not retried on its own: the first read and each Retry
-  preview or Retry checks send one request, the host entry read while the
-  saved entry is newer, otherwise the preview read. While the checks' inputs
-  are still being read, including a cached preview read again on return, the
-  header reads Loading checks... and the checks area "Loading the saved
-  content and settings..."; the reload instruction appears only after a read
-  ends unusable.
-- **Save scope copy.** EmDash stores SEO fields beside the entry, outside its
-  drafts. The note by Save SEO fields says that a published entry's live page
-  changes at once, even while other changes are a draft, and that an
-  unpublished entry shows the fields once it is published.
-- **Leaving the entry.** Unsaved popup edits are kept in memory for the tab
-  when the panel unmounts inside the admin, keyed by principal, collection,
-  entry and locale, never written. Returning restores them over the saved
-  values they were made against with a note in the sidebar and dialog; opening
-  Edit SEO reads the saved values once before they can be saved, and opens the
-  review when those changed. Reloading or closing the tab with unsaved edits
-  asks first through the browser's leave prompt.
-- **Review wording.** The conflict review names images in words (same,
-  different or none), never by media path.
-- **Refused writes and denied collection.** The panel's own plugin routes
-  (preview, directives, keywords, schema) need administrator access: a route
-  that declares no permission defaults to EmDash's `plugins:manage`. The
-  popup reads and writes the native SEO fields through EmDash's content API
-  under the signed-in account's content permissions. "Denied collection" in
-  the acceptance list means an entry write the host refuses for that account
-  (400, 401, 403 or 404): the attempt ends with no write, the draft is kept and the
-  notice says the changes could not be saved. A 409 with code `ENTRY_LOCKED`,
-  another editor holding the entry, is its own outcome: nothing was written,
-  the draft is kept and the notice asks to take over in EmDash before saving.
-  It never opens the changed-values review, which only a revision conflict
-  opens (`classifyNativeSeoWriteError`).
+Clearing a custom sharing image reveals the featured image or configured
+fallback. It does not delete the media asset or suppress every sharing image.
+An unsaved image preview is labelled Unsaved sharing image; the image status
+line explains which image will be used after saving.
 
-## Acceptance
+## Readback and recovery
 
-Verify unavailable, limited and fully qualified score states; concise checklist
-counts; absent visual developer disclosures with full metadata still accessible;
-light/dark, keyboard and narrow layouts; unsaved preview and explicit save/close.
+A successful write is confirmed by readback. Timeout, conflict and uncertain
+acknowledgement keep the draft and attempted values. Nothing silently reloads
+the entry, discards a parent draft or retries a write.
 
-For native authoring, exercise title/description set/clear/reopen, image
-choose/replace/clear/inheritance, denied collection, locale/entry switch, stale
-revision, lost acknowledgement followed by an unchanged check, the search card
-during each review, each conflict choice followed by an edit and save, leaving
-and returning with a dirty draft,
-native-panel refresh and dirty parent content followed by autosave/manual Save. No content, canonical, noindex, unrelated
-metadata or media asset may be overwritten. Check resulting published metadata.
-Locale switching and the denied-collection case have no installed result;
-the `0.4.0-beta.48` customer documents state that locale switching is not
-verified.
+| Readback or error | Required behavior |
+| --- | --- |
+| Attempt's original revision and original values | End the interrupted attempt, retain the draft and restore Save SEO fields and Discard SEO edits. A later attempt uses the same guard, preventing two writes from winning. |
+| Original revision with unexpected values | Keep the outcome uncertain. |
+| New saved values equal the attempted values | Confirm the save. |
+| Other changed saved values | Open the changed-values review. |
+| Definite host refusal (400, 401, 403 or 404) | End the attempt, keep the draft and explain that the changes could not be saved. |
+| `ENTRY_LOCKED` conflict | Keep the draft and ask the editor to take over in EmDash. Do not open the revision review. |
 
-No provider request, continuous scan, history write, new hosting service or
-translation expansion is introduced by opening or editing the popup. Complete
-focused checks and native verification before packaging. Recheck the exact new
-archive in the retained consumer fixture before promoting the verified source.
+Keep my edits and Use saved values adopt a reviewed saved revision. Retained
+edits save through a fresh guarded write against that revision. Images in the
+review are described as same, different or none, never by media path.
+
+After adoption, the host entry and preview refresh once per saved revision.
+Fields stay read-only until preview ownership facts match the adopted values.
+A host entry already at or beyond that revision is not refreshed again.
+A refresh that obtains a newer entry leaves the next preview read to that
+entry.
+
+## Preview states
+
+The search card shows reviewed saved title and description while a revision
+review is open, including fields the editor did not change. The sharing card
+keeps its last loaded preview. After the review, draft substitutions are
+allowed only when the preview's ownership facts are current for the locale
+and no earlier SEO record owns the value. A cleared value uses the reported
+fallback, or remains unavailable when no fallback was reported.
+
+A reopened entry may be cached by EmDash. When the saved-content read finds
+a newer revision, the panel refreshes the host entry once and shows Updating
+preview until it arrives. Each explicit Retry preview or Retry checks sends
+one request; it does not create a background retry loop. Loading inputs show
+Loading checks rather than a failure or an instruction to reload.
+
+The popup keeps character counts, accessible metadata, draft status and
+loading or error feedback visible. The score and checklist use the shared
+[score contract](score-checklist-contract.md); calculation details do not
+belong in the everyday editor summary.
+
+Owner: `content-extensions.tsx` and the `native-seo-editor-*` modules under
+`packages/emdash-plugin-seo/src/admin-ui/`.
+
+## Drafts and permissions
+
+Unsaved popup edits survive navigation inside the admin in tab memory, keyed
+by principal, collection, entry and locale. They are never persisted as a
+draft record. Returning restores the values and reports that edits were kept;
+opening Edit SEO reads saved values before allowing a save, with a review if
+they changed. Closing or reloading the tab with edits uses the browser's leave
+prompt.
+
+Plugin preview, directives, keywords and schema routes require administrator
+access through the host's plugin permission default, `plugins:manage`.
+Native SEO fields use the signed-in account's content permissions. Refusal
+must preserve edits without revealing another collection's data.
+
+Opening or editing the popup starts no provider request, continuous scan or
+analysis-history write.
+
+## Maintainer checks
+
+Exercise title and description set, clear and reopen; image selection,
+replacement, removal and inheritance; entry and locale changes; denied writes;
+stale revisions; and lost acknowledgements followed by readback. Check both
+conflict choices followed by another edit and save, leaving and returning with
+a draft, native-panel refresh and a dirty parent content draft. Verify the
+resulting public metadata and preservation of unrelated fields and assets.
+
+Cover light, dark, narrow and keyboard use. These are acceptance requirements,
+not a claim that every native lifecycle and locale flow is qualified; current
+platform coverage is listed in [compatibility](compatibility.md).

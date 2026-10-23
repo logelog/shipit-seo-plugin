@@ -93,18 +93,17 @@ Resolve release-blocking defects from beta feedback. Maintain the contribution
 and review process in [CONTRIBUTING.md](../CONTRIBUTING.md) and
 [GOVERNANCE.md](../GOVERNANCE.md) as work progresses.
 
-## First beta launch and announcement
+## Beta feedback
 
-1. Freeze the reviewed beta archive and record its identity and supported
-   combinations.
-2. Finish the product website, accepted product screenshots and install,
-   update and removal guides for that archive.
-3. Publish the reviewed GitHub pre-release and exact npm version on the
-   beta channel, keeping stable promotion separate.
-4. Check the public links and package integrity, then complete an installation
-   smoke check from the published package.
-5. Review the announcement with the project owner before posting it. Link the
-   package, guides, compatibility limits and routes for bug reports and ideas.
+Use reproducible installation, editing and recovery reports to guide beta
+stabilization. Include the plugin and host versions, expected behavior and a
+small synthetic reproduction. Questions and feature proposals belong in
+Discussions; confirmed bugs belong in Issues.
 
-These are launch gates, not statements that publication or announcement has
-already happened.
+The beta's admin name/logo configuration is available now. A broader
+white-label experience for agency and client projects is planned toward 1.0.
+Technical identifiers and required notices remain distinct from branding.
+
+Release notes and announcements should link to the current package, guides,
+compatibility scope and feedback channels. Publication, website deployment
+and an announcement are separate steps.

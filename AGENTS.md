@@ -1,129 +1,89 @@
 # Project development guide
 
-Shipit SEO is a native EmDash plugin. Read [CONTRIBUTING.md](CONTRIBUTING.md)
-for setup and review, and [docs/architecture.md](docs/architecture.md) for the
-runtime contracts.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup and checks, and
+[docs/architecture.md](docs/architecture.md) for source ownership and runtime
+contracts. Keep each change focused and preserve unrelated work.
 
 <!-- compatibility:development:start -->
 The default development target is **native-1.3.1** (EmDash/admin 1.3.1).
 Use Node **24.19.0**, pnpm **11.19.0**, Astro **7.3.2** and SQLite.
-The fixture is `integration/emdash/published-host-1.3.1`; its preview is
-`http://127.0.0.1:4365/_emdash/admin`.
+The fixture is `integration/emdash/published-host-1.3.1`.
 
 Retained native targets: `native-1.3.0`.
 The current target implements quick verification; full verification is not implemented for this target.
 <!-- compatibility:development:end -->
 
-[compatibility.json](compatibility.json) owns current targets and runtime pins.
-Follow [docs/compatibility.md](docs/compatibility.md) when changing them; run
-`pnpm sync:compatibility` and `pnpm check:compatibility`. Do not rewrite history
-or broaden support by replacing version strings throughout the repository.
+## Source and checks
 
-Use pull requests for contributions. Keep review comments constructive and
-follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). A passing check does not replace
-maintainer review or the contributor agreement.
+- `packages/emdash-plugin-seo/src`: engine, integration and shared contracts.
+- `src/admin-ui` beneath that package: workspace, editor and translations.
+- `scripts/published-host`: pinned-host and installed-package checks.
+- `tooling/plugin-dev`: setup, preview, verification and reports.
 
-## Repository map
+Use Linux or WSL2 with the pinned toolchain. Run one preview or verification
+at a time, stopping the preview before setup or checks. Read nearby selfchecks
+before changing behavior and add meaningful regression coverage.
+Use the focused checks in CONTRIBUTING, then `pnpm check:public` and
+`git diff --check`. Translation changes also need catalogue validation.
 
-- `packages/emdash-plugin-seo/src`: shared engine, native integration and admin.
-  `index.ts` registers hooks; `astro.ts` wraps the host integration;
-  `admin-contract.ts` defines shared requests and responses.
-- `packages/emdash-plugin-seo/src/admin-ui`: workspace and editor interfaces;
-  `i18n` contains bundled message catalogues and locale fallback.
-- `packages/emdash-plugin-seo/scripts`: package build and archive checks.
-- `integration/emdash/published-host-*`: isolated pinned development fixtures.
-- `scripts/published-host`: host verification and installed-package checks.
-- `tooling/plugin-dev` and `plugin-dev.json`: development commands and targets.
+[compatibility.json](compatibility.json) owns host targets and runtime pins.
+Follow [docs/compatibility.md](docs/compatibility.md), rather than replacing
+version strings throughout the repository. Keep unsupported verification
+modes explicit; do not report an unexecuted check as passed.
 
-## Local commands and evidence
+## Runtime contracts
 
-Use Linux or WSL2, with a WSL checkout on the Linux filesystem. Use the versions
-in `.nvmrc` and `package.json`; retain the pinned fixture lockfile unless the
-change specifically updates dependencies. Install nvm and Corepack if needed.
+Keep site defaults, publisher identity, content-type settings and entry
+overrides distinct. Preserve identity, locale, revision guards and ownership
+of stored data. Native SEO fields belong to EmDash and save separately from
+the content draft.
 
-```sh
-nvm install
-nvm use
-corepack enable
-pnpm dev:setup
-pnpm dev:doctor
-pnpm verify:quick
-```
+Basic browser checks, focus keywords and previews must work with optional
+server analysis off. Use the saved entry snapshot already loaded by the
+editor, not unsaved body edits. Opening a view must not start server analysis, write
+history, activate a feature, acknowledge resource use or submit to a provider.
 
-`pnpm dev:admin` starts TSX/CSS HMR. `pnpm dev:engine` refreshes the runtime once
-and starts the preview; restart it after an engine edit. Run one preview or
-verification at a time. Stop the preview before setup, build or verification.
-Use synthetic fixture data and keep authentication shortcuts on loopback.
+Bound reads and writes. Do not load an entire site to decorate a settings
+screen. Preserve explicit scan scopes and independent analysis/IndexNow
+controls. Taxonomy archive rules must not change assigned posts.
 
-For product changes, use the implemented verification modes listed in
-[docs/compatibility.md](docs/compatibility.md) and run `pnpm dev:report`. A mode
-that is not implemented must fail explicitly, not skip required checks. Use the focused
-selfcheck invocation and discovery rules in CONTRIBUTING while developing.
-Run `pnpm check:translations` for catalogue changes and `pnpm check:public`
-before submitting. Check the diff for whitespace and unrelated files.
+Navigation must not save or discard work. Keep drafts and their original
+revision across workspace navigation. For an uncertain save, inspect the
+stored value before another deliberate write; do not retry automatically,
+silently rebase a draft or reload away unsaved work.
 
-Report commands actually completed and their limits. A source preview, a
-render selfcheck, an installed archive and live provider acceptance establish
-different things. Changes to installation or public output need relevant
-installed-package evidence. Do not claim support from a different host graph.
+## Interface and translations
 
-## Change ownership and runtime behavior
+Check affected flows in light/dark, narrow and keyboard layouts. Preserve
+focus, accessible names, readable previews and loading/error/recovery states.
+Keep checklist wording concise and statuses meaningful. Previews are
+approximations; distinguish drafts, saved values and observed public output.
 
-Keep one cohesive change with its regression coverage. Read nearby code and
-selfchecks before editing a contract; coordinate edits to shared files and
-preserve unrelated work. CODEOWNERS identifies reviewers; it does not grant
-merge approval. Update affected customer guidance and retain third-party notices.
+Keep English message keys stable, preserve named placeholders and locale
+fallback, and render translations as text. Translate interface values, not
+user content, routes or schema properties. Obtain fluent review for new
+catalogues and avoid remote translation dependencies.
 
-Keep site defaults, publisher identity, content-type templates and entry
-customizations distinct. Preserve entry identity, locale, revision guards,
-conflict recovery and unknown-save handling. Do not retry an uncertain write
-automatically or turn navigation into a save, discard or activation action.
+## Security and data retention
 
-Basic browser checks, focus keywords and previews remain available when optional
-server analysis is off. Use the saved snapshot already read for the editor;
-do not start scans or write score history to display basic checks. Keep saved
-scores and their freshness separate from current browser results. Preserve the
-native host's ownership and separate save timing for its SEO fields.
+Authorize privileged operations on the server. Validate identifiers, lengths
+and URLs at trust boundaries and escape rendered output. Constrain outbound
+destinations, redirects, timeouts and response sizes. Keep secrets out of URLs,
+logs and client bundles; no provider request may be a navigation side effect.
 
-Bound reads and writes by the requested task, permissions and input size. Do not
-load all content to decorate a settings screen. Keep optional analysis and
-provider submissions explicitly controlled; opening a panel must not acknowledge
-costs, start background work or send requests. Feature controls are not a hard
-hosting spending cap. Taxonomy archive rules must not alter assigned posts.
+Preserve customer content, uploads, settings and recovery data. Installation,
+disable, package removal and data deletion are distinct operations. Keep a
+consistent database/uploads recovery path, including committed SQLite WAL
+data. Never delete host-owned routes or records as cleanup.
 
-## Interface regressions and translations
+Do not commit credentials, sessions, databases, customer exports, personal
+data, machine paths or fixed workstation admin URLs. Use synthetic examples.
+Keep fork checks read-only and contributed code out of privileged workflows.
+Follow [SECURITY.md](SECURITY.md) for vulnerability reports.
 
-Check the affected flow in light and dark themes and narrow layouts. Preserve
-keyboard operation, visible focus, accessible names and meaningful icons.
-Keep checklist rows concise, status labels clear and preview text readable at
-its native size. Do not shrink a desktop card into an unreadable sidebar.
-Previews are approximate; distinguish unsaved input, last-loaded saved metadata
-and published-page evidence. Test loading, empty, error and recovery states.
+## Review
 
-Follow the catalogue workflow in CONTRIBUTING. Keep English keys stable and
-preserve named placeholders and locale fallback. Translate interface values,
-not user content, routes or schema properties. Keep language contributions
-focused and obtain fluent review; do not add a remote translation dependency.
-
-## Security, storage and customer lifecycle
-
-Check authorization on the server for every privileged operation. Validate
-input, lengths, identifiers and URLs at trust boundaries; escape output and
-render translations as text. Preserve storage ownership and revision checks.
-Keep outbound destinations, redirects, response sizes and timeouts constrained.
-Keep secrets out of URLs, logs and client bundles; require explicit configuration
-for authenticated provider calls. Never submit to a provider as a UI side effect.
-Keep fork checks read-only; do not execute contributed code in a privileged
-workflow.
-
-Do not commit credentials, sessions, databases, customer exports, personal data
-or machine-specific paths. Use synthetic examples and redact screenshots and
-logs. Keep local state out of both the public tree and customer archive. Follow
-[SECURITY.md](SECURITY.md) for vulnerability reporting.
-
-Document installation, disabling, removal and data deletion as separate actions.
-Retain saved data by default and preserve a verified recovery path, including
-consistent SQLite backups with committed WAL data. Do not remove routes or data
-owned by the host or another plugin. Contributions use MIT and require the
-version-specific agreement described in [CLA.md](CLA.md); do not represent an
-unchecked acknowledgement as a verified signature.
+Update affected customer guidance and third-party notices. Describe the
+observable behavior, completed checks and remaining limitations in the PR.
+Follow the Code of Conduct and contributor agreement. CODEOWNERS requests
+review; it does not authorize a merge.

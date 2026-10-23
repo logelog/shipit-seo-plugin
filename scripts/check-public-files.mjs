@@ -13,6 +13,18 @@ const sensitiveText = [
   [new RegExp("https?://(?:github\\.com|raw\\.githubusercontent\\.com)/logelog/" + "shipit-emdash-" + "seo(?:[/?#]|$)", "i"), "private workspace reference"],
 ];
 
+function hasWorkstationAdminUrl(contents) {
+  for (const match of contents.matchAll(/\bhttps?:\/\/[^\s<>"`]+/gi)) {
+    let url;
+    try { url = new URL(match[0]); } catch { continue; }
+    const host = url.hostname.toLowerCase().replace(/\.$/, "");
+    const local = host === "localhost" || host.endsWith(".localhost") ||
+      /^127\./.test(host) || ["0.0.0.0", "[::1]", "[::]"].includes(host);
+    if (local && /^\/_emdash(?:\/|$)/.test(url.pathname)) return true;
+  }
+  return false;
+}
+
 export function checkPublicFile(path, contents, symbolicLink = false) {
   const errors = [];
   const parts = path.split("/");
@@ -23,6 +35,10 @@ export function checkPublicFile(path, contents, symbolicLink = false) {
       /\.(?:db|sqlite|sqlite3)(?:-(?:wal|shm|journal))?$/.test(name) ||
       /\.(?:log|tgz|pem|key)$/.test(name)) errors.push("local or sensitive file");
   if (typeof contents === "string") {
+    if (/\.mdx?$/i.test(path)) {
+      if (hasWorkstationAdminUrl(contents)) errors.push("workstation admin URL in published prose");
+      if (/(?:\b[a-z]:[\\/]|file:\/\/\/)/i.test(contents)) errors.push("absolute workstation path in published prose");
+    }
     if (contents.includes("\0") && !binaryExtensions.has(extname(path).toLowerCase())) errors.push("NUL byte in text file");
     for (const [pattern, label] of sensitiveText) {
       if (pattern.test(contents)) errors.push(label);

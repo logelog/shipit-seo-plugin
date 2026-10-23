@@ -71,3 +71,35 @@ test("binary assets still receive sensitive text checks", () => {
   assert.deepEqual(checkPublicFile("docs/image.png", "\0binary"), []);
   assert.deepEqual(checkPublicFile("docs/image.png", "\0" + "npm_" + "x".repeat(40)), ["docs/image.png: access token"]);
 });
+
+test("published prose rejects fixed workstation admin links", () => {
+  const previousBlock = "The fixture is integration/emdash/published-host-1.3.1; its preview is\n" +
+    "http://127.0.0.1:4365/_emdash/admin.";
+  for (const file of ["README.md", "docs/architecture.md", "packages/emdash-plugin-seo/README.md"]) {
+    assert.deepEqual(checkPublicFile(file, previousBlock), [file + ": workstation admin URL in published prose"]);
+  }
+  for (const value of [
+    "https://localhost:4396/_emdash/admin", "http://[::1]:4365/_emdash/admin",
+    "http://[0:0:0:0:0:0:0:1]:4415/_emdash/admin", "http://127.1:3000/_emdash/api/content",
+    "http://preview.localhost:4321/_emdash/admin", "http://0.0.0.0:8080/_emdash/admin",
+  ]) assert.match(checkPublicFile("docs/install.md", value).join("\n"), /workstation admin URL/);
+});
+
+test("published prose rejects absolute workstation file paths", () => {
+  const home = ["", "home", "example", "project"].join("/");
+  const windows = ["C:", "work", "project"].join("\\");
+  assert.match(checkPublicFile("README.md", home).join("\n"), /local user path/);
+  assert.match(checkPublicFile("docs/install.md", windows).join("\n"), /absolute workstation path/);
+  assert.match(checkPublicFile("README.md", "file:" + "///tmp/site").join("\n"), /absolute workstation path/);
+});
+
+test("portable localhost examples, relative routes and source fixtures remain valid", () => {
+  for (const value of [
+    "For example, http://localhost:4321/posts/example is a local development page.",
+    "Use /_emdash/admin in your site's existing origin.",
+    "https://www.npmjs.com/package/@shipitseo/emdash-plugin-seo",
+    "https://github.com/logelog/shipit-seo-plugin",
+    "Run the command from path/to/site.",
+  ]) assert.deepEqual(checkPublicFile("docs/install.md", value), []);
+  assert.deepEqual(checkPublicFile("src/origin.selfcheck.ts", "http://127.0.0.1:4365/_emdash/admin"), []);
+});
