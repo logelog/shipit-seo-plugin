@@ -66,4 +66,4 @@ site. Turning delivery off preserves its key, queue and history; already
 dispatched requests may finish. Review retained work before enabling it again.
 
 See [compatibility and verification coverage](compatibility.md#beta-verification-coverage)
-for completed checks and the automatic-delivery flow that still needs testing.
+for completed checks and remaining limits.

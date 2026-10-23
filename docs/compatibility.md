@@ -27,13 +27,13 @@ For `0.4.0-beta.55`, the completed checks cover:
 | --- | --- |
 | Native 1.3.0 | Full native verification, packed npm/pnpm consumer checks and SQLite/package upgrade recovery |
 | Native 1.3.1 | Exact-archive installation, build, compiled checks and focused editor/workspace checks, including Social conflict recovery |
-| Live IndexNow | One manual batch of 11 public URLs sent through the native 1.3.0 plugin, with an HTTP 200 response |
+| Live IndexNow | A manual batch of 11 public URLs and an automatic CMS publication notification sent through the native 1.3.0 plugin, both with HTTP 200 responses |
 | Public files | A static deployment served its sitemap, robots.txt and the saved llms.txt document with HTTP 200; the sitemap listed all 11 intended pages |
 
-These live checks were completed on 23 October 2026. Automatic IndexNow
-settings persisted after reload; delivery triggered by a real CMS content
-event still needs verification. Provider receipt does not establish crawling
-or indexing.
+These live checks were completed on 23 October 2026. Automatic settings
+persisted after reload, and a real CMS publication event sent a notification.
+Other automatic event and retry flows still need verification. Provider
+receipt does not establish crawling or indexing.
 
 Full native 1.3.1 verification, every lifecycle UI flow, native SEO dirty-draft
 and lost-acknowledgement recovery, full editor locale switching, and npm
