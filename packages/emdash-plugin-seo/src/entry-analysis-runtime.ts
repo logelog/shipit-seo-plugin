@@ -1,3 +1,4 @@
+import { bindContentAnalysis, bodyMappingRevision, contentAnalysisRevision, contentAnalysisOptions, contentBodyPlan, projectContentBody, type SeoContentAnalysisOptions } from "./content-body-mapping.ts";
 // Saved-entry metadata resolution and disposable analysis shared by the native
 // engine and the registry panel bundle. The registry bundle imports this module
 // directly, so it must stay free of route wiring, zod and Node built-ins or the
@@ -127,6 +128,7 @@ export interface Override {
 export type SeoScoreRecord = SeoAdminContentScore;
 
 interface SeoAnalysisRuntimeConfig {
+	contentAnalysis?: SeoContentAnalysisOptions;
 	global: GlobalSeoSettings;
 	presets: SeoAdminSchemaPresetValues;
 	customSchemas: SeoAdminCustomSchema[];
@@ -569,6 +571,7 @@ export async function readAnalysisRuntimeConfig(
 		contentTypeRolesInvalid: contentTypeRoles.invalid,
 		businessIdentity,
 		publisherOwnership,
+		contentAnalysis: contentAnalysisOptions(ctx),
 		settings: settings.values,
 		fingerprint: analysisConfigurationFingerprint(
 			settings.values,
@@ -579,8 +582,14 @@ export async function readAnalysisRuntimeConfig(
 			businessIdentity,
 			publisherOwnership,
 			modules.values,
-		),
+		) + contentAnalysisRevision(contentAnalysisOptions(ctx)),
 	};
+}
+
+function bodyPlanForRuntime(config: SeoAnalysisRuntimeConfig, collection: string, item: any, bodyField: string | null) {
+ const carrier = {};
+ if (config.contentAnalysis) bindContentAnalysis(carrier, config.contentAnalysis);
+ return contentBodyPlan(carrier, collection, String(item?.slug ?? item?.data?.slug ?? ""), bodyField);
 }
 
 export function entryAnalysisConfigurationFingerprint(
@@ -603,7 +612,7 @@ export function entryAnalysisConfigurationFingerprint(
 	);
 	// Only a rule that covers this collection is an input, so other types keep their fingerprints.
 	const typeRule = contentTypeNoindexApplies(runtimeConfig.settings.contentTypeNoindex, collection) ? ":content-type-noindex" : "";
-	return `${fingerprint}:assessment-v${assessmentProfile.version}:${assessmentProfile.profile}${typeRule}`;
+	return `${fingerprint}:assessment-v${assessmentProfile.version}:${assessmentProfile.profile}${typeRule}${bodyMappingRevision(bodyPlanForRuntime(runtimeConfig, collection, item, null))}`;
 }
 
 export function isTemplateCollection(value: string): value is SeoTemplateCollection {
@@ -1538,7 +1547,8 @@ export async function prepareContentItemAnalysis(
 	const featuredImage = featuredImageFromContentData(data);
 	const image = effective?.image.value ?? clean(seo.image) ?? featuredImage;
 	const noindex = effective ? !effective.indexable : seo.noIndex === true;
-	const document = contentBodyValue(data, definition);
+	const projected = projectContentBody(data, bodyPlanForRuntime(effectiveRuntimeConfig, collection, item, definition?.portableTextBodyField ?? null));
+	const document = projected.document;
 	const body = extractSeoDocumentText(document);
 	const bodySource = clean(data.body_source);
 	const resolvedDescriptionSource = effective ? effective.description.source : clean(seo.description) ? "core-seo" : "content";
@@ -1591,6 +1601,7 @@ export async function prepareContentItemAnalysis(
 			publicationStatus: clean(item?.status) ?? clean(data.status) ?? null,
 			body,
 			document,
+			bodyIncomplete: projected.incomplete,
 			contentImages: contentImageInputs(data),
 			bodySource,
 			focusKeyword,

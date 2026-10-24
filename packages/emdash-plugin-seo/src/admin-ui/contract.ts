@@ -1,3 +1,4 @@
+import { validSeoBodyMapping } from "../content-body-mapping.ts";
 import { isStoredCustomVerificationTags } from "../custom-verification-tags.ts";
 import { isStoredTaxonomyArchiveNoindex } from "../taxonomy-archive-policy.ts";
 import { isStoredContentTypeNoindex } from "../content-type-noindex-policy.ts";
@@ -422,7 +423,21 @@ export function parseSeoAdmin404TriageResult(value: unknown): SeoAdmin404TriageR
 	return value as unknown as SeoAdmin404TriageResult;
 }
 
-const SCORE_LIMIT_QUALIFIER = /^Limited to (?:[1-9]?[0-9]): \S.*$/;
+const SCORE_LIMIT_QUALIFIER = /^Limited to ([1-9]?[0-9]): \S.*$/;
+const UNSET_KEYWORD_SUFFIX = ". No focus keyword";
+
+/**
+ * The qualifiers `seoScoreDisplay` composes. A named limit is shown only when
+ * it lowered the score, so it names that score; an unset focus keyword always
+ * holds the score below Good.
+ */
+function validScoreQualifier(qualifier: string, score: number): boolean {
+	const belowGood = seoScoreBand(score) !== "good";
+	if (qualifier === "Add a focus keyword" || qualifier === "No focus keyword") return belowGood;
+	const keywordUnset = qualifier.endsWith(UNSET_KEYWORD_SUFFIX);
+	const limit = SCORE_LIMIT_QUALIFIER.exec(keywordUnset ? qualifier.slice(0, -UNSET_KEYWORD_SUFFIX.length) : qualifier);
+	return limit !== null && Number(limit[1]) === score && (!keywordUnset || belowGood);
+}
 
 /**
  * An Overview row is a numbered result of the current analyzer, or a saved
@@ -438,10 +453,10 @@ function validScorePresentation(value: unknown, score: unknown): boolean {
 	const band = seoScoreBand(score as number);
 	return value.label === seoScoreBandLabel(band) &&
 		value.tone === (band === "good" ? "good" : band === "needs-improvement" ? "review" : "poor") &&
-		(value.qualifier === null || value.qualifier === "No focus keyword" || SCORE_LIMIT_QUALIFIER.test(value.qualifier));
+		(value.qualifier === null || validScoreQualifier(value.qualifier as string, score as number));
 }
 
-/** Every score below the Good band has a Failed or Partly met row, so it always needs attention. */
+/** Every score below the Good band has a Failed or Partly met row or an unset focus keyword, so it always needs attention. */
 function validNeedsAttention(presentation: unknown, needsAttention: unknown): boolean {
 	if (presentation === null) return needsAttention === null;
 	if (typeof needsAttention !== "boolean") return false;
@@ -2497,6 +2512,11 @@ export function parseSeoAdminEntryPreviewResult(value: unknown): SeoAdminEntryPr
 			list.indexOf(source) === index) &&
 		(preview.noindexSources.length === 0) === preview.indexable))
 		contractError("preview.noindexSources");
+	if (preview.bodyAnalysis !== undefined) {
+		const body = preview.bodyAnalysis;
+		if (!isRecord(body) || body.version !== 1 || !(body.bodyField === null || typeof body.bodyField === "string" && /^[A-Za-z_][A-Za-z0-9_-]{0,127}$/.test(body.bodyField) && !["constructor", "prototype", "__proto__"].includes(body.bodyField)) ||
+			(body.mapping !== undefined && (!validSeoBodyMapping(body.mapping) || JSON.stringify(body.mapping).length > 65_536 || body.mapping.bodyField !== body.bodyField || body.mapping.collection !== preview.content.collection))) contractError("preview.bodyAnalysis");
+	}
 	if (preview.analysis !== undefined && !(isRecord(preview.analysis) &&
 		(["imageAltChecks", "schemaOutput", "nosnippet", "descriptionGenerated"] as const)
 			.every((key) => typeof (preview.analysis as Record<string, unknown>)[key] === "boolean")))

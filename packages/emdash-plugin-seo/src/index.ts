@@ -4,6 +4,7 @@
 import type { PluginDescriptor } from "emdash";
 
 import { SEO_ENGINE_VERSION } from "./admin-contract.ts";
+import { checkContentAnalysisOptions, type SeoContentAnalysisOptions } from "./content-body-mapping.ts";
 import { SEO_DEFAULT_BRAND_NAME, seoBrandMenuLabel, seoBrandState, type SeoBrandState } from "./branding.ts";
 import type { IndexNowInstallation, IndexNowKeyRoute, IndexNowSiteIssue } from "./indexnow.ts";
 import { indexNowSiteOriginUrl } from "./indexnow-site.ts";
@@ -117,6 +118,7 @@ export interface SeoPluginInstallation {
 	configuredPlugins?: unknown;
 	/** Validated site branding; an unreadable value gives a neutral label and no logo, never an error. */
 	branding?: unknown;
+	contentAnalysis?: SeoContentAnalysisOptions;
 }
 
 const SITE_ISSUES: readonly (IndexNowSiteIssue | null)[] = [null, "missing", "local", "not-https", "path", "port", "not-public"];
@@ -145,6 +147,7 @@ function validInstallation(value: unknown, siteUrl: string | undefined): SeoPlug
 		...(candidate.llmsTxt !== undefined ? { llmsTxt: validLlmsTxtInstallation(candidate.llmsTxt)! } : {}),
 		...(candidate.configuredPlugins !== undefined ? { configuredPlugins: candidate.configuredPlugins } : {}),
 		...(candidate.branding !== undefined ? { branding: candidate.branding } : {}),
+		...(candidate.contentAnalysis !== undefined ? { contentAnalysis: checkContentAnalysisOptions(candidate.contentAnalysis) } : {}),
 	};
 }
 

@@ -1,7 +1,7 @@
 # Check content and keywords
 
-**Available in 0.4.0-beta.57 (unreleased).** The beta.57 scoring and custom-block
-changes described here are not part of the published beta.56 package.
+The scoring rules and custom-block configuration in this guide apply to
+**0.4.0-beta.57**.
 
 ## Check a saved entry
 

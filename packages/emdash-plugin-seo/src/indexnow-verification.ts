@@ -33,11 +33,10 @@ export function matchesIndexNowVerification(
 		Number.isFinite(Date.parse(candidate.checkedAt));
 }
 
-export function indexNowVerificationUrl(settings: IndexNowSettingsValues, siteUrl: string): string {
+function keyFileLocation(settings: IndexNowSettingsValues, siteUrl: string): string {
 	let site: URL;
 	try { site = indexNowSiteOriginUrl(siteUrl); }
 	catch { throw new IndexNowSetupError("Automatic setup requires this website's public HTTPS domain in the site settings and plugin network configuration.", "origin"); }
-	if (!isValidIndexNowKey(settings.apiKey)) throw new IndexNowSetupError("The verification key is invalid.", "key");
 	const location = resolveIndexNowKeyLocation(settings.keyLocation, site.origin);
 	if (!location) throw new IndexNowSetupError("The verification file must belong to this website.", "key");
 	const url = new URL(location);
@@ -47,12 +46,15 @@ export function indexNowVerificationUrl(settings: IndexNowSettingsValues, siteUr
 	return url.href;
 }
 
-export async function verifyIndexNowKey(
-	ctx: PluginContext,
-	settings: IndexNowSettingsValues,
-	siteUrl: string,
-): Promise<IndexNowVerification> {
-	const location = indexNowVerificationUrl(settings, siteUrl);
+export function indexNowVerificationUrl(settings: IndexNowSettingsValues, siteUrl: string): string {
+	const location = keyFileLocation(settings, siteUrl);
+	if (!isValidIndexNowKey(settings.apiKey)) throw new IndexNowSetupError("The verification key is invalid.", "key");
+	return location;
+}
+
+export const INDEXNOW_KEY_VERIFICATION_USER_AGENT = "IndexNowKeyVerifier/1.0";
+
+async function readIndexNowKeyFile(ctx: PluginContext, location: string): Promise<string> {
 	if (!ctx.http) throw new IndexNowSetupError("IndexNow network access is unavailable.");
 	const controller = new AbortController();
 	const { signal } = controller;
@@ -70,7 +72,7 @@ export async function verifyIndexNowKey(
 		try {
 			const request = ctx.http.fetch(location, {
 				method: "GET", redirect: "manual", credentials: "omit",
-				headers: { accept: "text/plain" }, signal,
+				headers: { accept: "text/plain", "user-agent": INDEXNOW_KEY_VERIFICATION_USER_AGENT }, signal,
 			});
 			void request.then((late) => {
 				if (signal.aborted) void late.body?.cancel().catch(() => {});
@@ -80,30 +82,72 @@ export async function verifyIndexNowKey(
 			if (error instanceof IndexNowSetupError) throw error;
 			throw new IndexNowSetupError("The key file could not be reached at the public site address. Check that the deployed site is online and installed through the plugin's Astro integration, then try again.");
 		}
-		if (response.status !== 200 || response.redirected || (response.url && response.url !== location) ||
-			response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase() !== "text/plain") {
+		const rejectResponse = (message: string): never => {
 			void response.body?.cancel().catch(() => {});
-			throw new IndexNowSetupError("The website must serve the verification file directly as plain text. Check its route and access rules.");
-		}
+			throw new IndexNowSetupError(message);
+		};
+		if (response.status >= 300 && response.status < 400)
+			rejectResponse("The key file redirects to another address. Serve it directly at the configured public address, then try again.");
+		if (response.status === 403)
+			rejectResponse("The key file returned HTTP 403. Check firewall or access rules that block public verification requests, then try again.");
+		if (response.status === 404)
+			rejectResponse("The key file returned HTTP 404. Check that the deployed site serves the configured verification file, then try again.");
+		if (response.status !== 200)
+			rejectResponse("The key file returned HTTP " + response.status + ". It must respond with HTTP 200 before IndexNow can turn on.");
+		if (response.redirected || (response.url && response.url !== location))
+			rejectResponse("The key file redirects to another address. Serve it directly at the configured public address, then try again.");
+		if (response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase() !== "text/plain")
+			rejectResponse("The key file was not served as plain text. Serve only the verification key with a text/plain content type.");
 		reader = response.body?.getReader();
 		if (!reader) throw new IndexNowSetupError("The host did not provide a readable verification file.");
 		while (true) {
 			const chunk = await Promise.race([reader.read(), aborted]);
 			if (chunk.done) break;
 			size += chunk.value.byteLength;
-			if (size > 256) throw new IndexNowSetupError("The verification file contains unexpected content.");
-			text += decoder.decode(chunk.value, { stream: true });
+			if (size > 256) throw new IndexNowSetupError("The verification file is larger than 256 bytes. Serve only the IndexNow key.");
+			try { text += decoder.decode(chunk.value, { stream: true }); }
+			catch { throw new IndexNowSetupError("The verification file is not valid UTF-8 plain text."); }
 		}
-		text += decoder.decode();
+		try { text += decoder.decode(); }
+		catch { throw new IndexNowSetupError("The verification file is not valid UTF-8 plain text."); }
+	} catch (error) {
+		if (error instanceof IndexNowSetupError) throw error;
+		throw new IndexNowSetupError("The verification file could not be read completely. Check the public file and try again.");
 	} finally {
 		clearTimeout(timer);
 		signal.removeEventListener("abort", onAbort);
 		void reader?.cancel().catch(() => {});
 	}
-	if (text.trim() !== settings.apiKey)
-		throw new IndexNowSetupError("The verification file does not contain the current key. Check the deployed route and try again.");
+	const key = text.trim();
+	if (!isValidIndexNowKey(key))
+		throw new IndexNowSetupError("The verification file must contain one valid IndexNow key as plain text.");
+	return key;
+}
+
+function verification(settings: IndexNowSettingsValues, siteUrl: string, apiKey: string): IndexNowVerification {
 	return {
-		siteOrigin: new URL(siteUrl).origin, keyLocation: settings.keyLocation,
-		apiKey: settings.apiKey, checkedAt: new Date().toISOString(),
+		siteOrigin: indexNowSiteOriginUrl(siteUrl).origin, keyLocation: settings.keyLocation,
+		apiKey, checkedAt: new Date().toISOString(),
 	};
+}
+
+/** Read a site-owned key before the first setup, without replacing its file. */
+export async function readExistingIndexNowKey(
+	ctx: PluginContext,
+	settings: IndexNowSettingsValues,
+	siteUrl: string,
+): Promise<IndexNowVerification> {
+	const key = await readIndexNowKeyFile(ctx, keyFileLocation(settings, siteUrl));
+	return verification(settings, siteUrl, key);
+}
+
+export async function verifyIndexNowKey(
+	ctx: PluginContext,
+	settings: IndexNowSettingsValues,
+	siteUrl: string,
+): Promise<IndexNowVerification> {
+	const key = await readIndexNowKeyFile(ctx, indexNowVerificationUrl(settings, siteUrl));
+	if (key !== settings.apiKey)
+		throw new IndexNowSetupError("The verification file does not contain the current key. Match the saved key and the site's file without replacing an existing key unintentionally, then try again.");
+	return verification(settings, siteUrl, settings.apiKey);
 }

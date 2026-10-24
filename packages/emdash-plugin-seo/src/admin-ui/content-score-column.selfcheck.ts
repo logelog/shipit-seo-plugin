@@ -786,9 +786,9 @@ const columnLimited = asColumnScore({
 	assessmentProfile: { profile: "general", version: 1 }, imageSeoEnabled: false,
 });
 const columnTemplate = asColumnScore({ ...columnControlInput, document: undefined, body: "", bodySource: "template" });
-assert.equal(columnControl.score, 100, "the numeric control must earn its value from the analyzer");
+assert.deepEqual([columnControl.calculation?.rawScore, columnControl.score], [100, 79], "the numeric control earns 100 from the analyzer and an unset keyword holds it at 79");
 assert.equal(seoAnalysisSummary(columnControl).numericBadgeAvailable, true);
-assert.equal(columnLimited.score, 94, "a short General entry keeps its weighted result in details; Internal links is Partly met");
+assert.deepEqual([columnLimited.calculation?.rawScore, columnLimited.score], [94, 79], "a short General entry keeps its weighted result in details; Internal links is Partly met");
 assert.equal(seoAnalysisSummary(columnLimited).numericBadgeAvailable, false);
 assert.equal(seoAnalysisSummary(columnLimited).label, "Too little text to score");
 assert.equal(seoAnalysisSummary(columnTemplate).label, "Partially checked");
@@ -811,9 +811,9 @@ for (const { name, score, prefix, qualifier, freshness, badge } of columnCases) 
 }
 assert.equal(contentScoreColumnPresentation({ ...columnControl, scoreVersion: SEO_SCORE_VERSION - 1 }).description, "Earlier analyzer. Analyze again.");
 const columnNumeric = contentScoreColumnPresentation(columnControl);
-assert.equal(columnNumeric.qualifier, "No focus keyword");
-assert.equal(columnNumeric.badgeText, "100", "an unset keyword never hides the number");
-assert.equal(columnNumeric.description, "Good: 100/100. No focus keyword");
+assert.deepEqual([columnNumeric.label, columnNumeric.qualifier], ["Needs improvement", "Add a focus keyword"]);
+assert.equal(columnNumeric.badgeText, "79", "an unset keyword never hides the number");
+assert.equal(columnNumeric.description, "Needs improvement: 79/100. Add a focus keyword");
 const columnKeyword = contentScoreColumnPresentation(asColumnScore({ ...columnControlInput, focusKeywords: ["growth marketing strategy"] }));
 assert.deepEqual([columnKeyword.label, columnKeyword.qualifier, columnKeyword.badgeText], ["Good", null, String(asColumnScore({ ...columnControlInput, focusKeywords: ["growth marketing strategy"] }).score)]);
 assert.equal(JSON.stringify([columnControl, columnLimited, columnCases]), columnBefore);
@@ -846,9 +846,9 @@ for (const { name, score } of columnCases) {
 	assert.doesNotMatch(html, /\d+\/100/, name + " cannot reintroduce an unqualified score through markup");
 }
 const columnNumericHtml = renderToStaticMarkup(React.createElement(ColumnPill, { score: columnControl }));
-assert.match(columnNumericHtml, /title="Good: 100\/100. No focus keyword"/);
-assert.match(columnNumericHtml, /aria-label="Good: 100\/100. No focus keyword"/);
+assert.match(columnNumericHtml, /title="Needs improvement: 79\/100. Add a focus keyword"/);
+assert.match(columnNumericHtml, /aria-label="Needs improvement: 79\/100. Add a focus keyword"/);
 assert.match(columnNumericHtml, /data-freshness="current"/);
-assert.match(columnNumericHtml, />100<\/span>$/);
+assert.match(columnNumericHtml, />79<\/span>$/);
 
 console.log("SEO content score column self-check passed.");

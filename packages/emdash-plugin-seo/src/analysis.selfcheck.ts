@@ -7,6 +7,7 @@ import {
 	seoAnalysisPresentation,
 	seoAnalysisSummary,
 	seoContentCheckProblem,
+	seoKeywordCheckConsistencyProblem,
 	seoScoreDisplay,
 	seoScoredCheckMask,
 	isSeoScoredCheckMask,
@@ -381,20 +382,95 @@ check(
 		.filter((item) => item.category === "keyword")
 		.every((item) => item.weight === 0 && item.status !== "fail"),
 );
-check("template-managed and optional checks do not dilute the score", templatePage.score === 100, `got ${templatePage.score}`);
+check("unread template content keeps a keyword-readiness cap without claiming a complete badge",
+	templatePage.score === 79 && seoScoreDisplay(templatePage).score === null, `got ${templatePage.score}`);
 
 const missingPostKeyword = analyzeSeoContent(
 	fixture({ focusKeyword: undefined }),
 );
 check(
-	"a missing primary target is a Suggestion to add one, never a failure or score cap",
+	"an unset primary target caps a complete numeric assessment below Good without failing optional phrase rows",
 	missingPostKeyword.checks.some((item) => item.id === "focus-keyword" && item.basis === "measured" && item.status === "review" &&
 		item.weight === 0 && /Add a focus keyword/.test(item.recommendation)) &&
 		missingPostKeyword.checks.filter((item) => item.category === "keyword").every((item) => item.weight === 0) &&
-		missingPostKeyword.calculation.limit === null && missingPostKeyword.status === "pass" && missingPostKeyword.score === 100 &&
-		seoScoreDisplay(missingPostKeyword).qualifier === "No focus keyword",
+		missingPostKeyword.calculation.limit?.reason === "focus-keyword-unset" && missingPostKeyword.status === "review" && missingPostKeyword.score === 79 &&
+		seoScoreDisplay(missingPostKeyword).qualifier === "Add a focus keyword",
 	`${missingPostKeyword.score} ${missingPostKeyword.status}`,
 );
+
+for (const profile of ["article", "general"] as const) {
+	for (const target of [undefined, "", "   ", "😀 !!!"]) {
+		const result = analyzeSeoContent(fixture({ focusKeyword: target, focusKeywords: [], assessmentProfile: { profile, version: 1 } }));
+		const display = seoScoreDisplay(result);
+		const summary = seoAnalysisSummary(result);
+		check(`${profile}: an unset or unmatchable target keeps an automatic numeric score below Good`,
+			result.score === 79 && result.calculation.rawScore === 100 &&
+			result.calculation.limit?.reason === "focus-keyword-unset" &&
+			display.score === 79 && display.label === "Needs improvement" && summary.numericBadgeAvailable && summary.tone === "review");
+	}
+	const noBodyImages = idealDocument().filter(node => node._type !== "image");
+	const noImage = analyzeSeoContent(fixture({ document: noBodyImages, focusKeyword: undefined, assessmentProfile: { profile, version: 1 } }));
+	check(`${profile}: an unset target with no body images gets readiness coaching, not an invented image failure`,
+		noImage.score === 79 && noImage.checks.find(item => item.id === "image-alt-text")?.basis === "not-applicable" &&
+		noImage.metrics.imageCount === 0);
+}
+for (const [name, overrides, cap] of [
+	["missing title", { title: "", focusKeyword: undefined }, 49],
+	["very short article", { document: [block("A brief body.")], focusKeyword: undefined }, 40],
+	["short article", { document: [block(Array.from({ length: 63 }, () => "useful").join(" "))], focusKeyword: undefined }, 70],
+] as const) {
+	const result = analyzeSeoContent(fixture(overrides));
+	check(`${name}: the lower limit wins over missing keyword readiness`,
+		result.score <= cap && result.calculation.limit?.cap === cap && result.calculation.limits.some(limit => limit.reason === "focus-keyword-unset"));
+}
+const withoutFocusEvidence = ideal.checks.filter(item => item.id !== "focus-keyword");
+let focusEvidenceRefused = false;
+try { calculateSeoScore(withoutFocusEvidence); } catch { focusEvidenceRefused = true; }
+check("removing readiness evidence cannot produce a current score or a complete display",
+	focusEvidenceRefused && seoScoredCheckMask(withoutFocusEvidence) === null &&
+	seoScoreDisplay({ ...ideal, checks: withoutFocusEvidence }).score === null);
+for (const [actual, status] of [[null, "pass"], ["growth marketing", "review"], ["  growth marketing", "pass"], ["😀 !!!", "pass"]] as const) {
+	const focus = { ...ideal.checks.find(item => item.id === "focus-keyword")!, status, evidence: { actual, expected: "an optional focus keyword", source: "SEO keyword profile" } };
+	check("readiness evidence and its status must agree on a normalized matchable keyword",
+		seoContentCheckProblem(focus, true) === "focus-keyword-evidence");
+}
+
+const forgedTargetChecks = missingPostKeyword.checks.map(item => item.id === "focus-keyword"
+	? { ...item, status: "pass" as const, evidence: { ...item.evidence, actual: "example" } } : item);
+let forgedTargetRefused = false;
+try { aggregateSeoChecks(forgedTargetChecks, "article"); } catch { forgedTargetRefused = true; }
+const forgedTargetDisplay = seoScoreDisplay({ ...missingPostKeyword, score: 100, checks: forgedTargetChecks });
+check("a forged ready keyword cannot turn unassessed phrase rows into a 100-point assessment",
+	forgedTargetRefused && seoKeywordCheckConsistencyProblem(forgedTargetChecks) === "keyword-title" &&
+	seoScoredCheckMask(forgedTargetChecks) === null && forgedTargetDisplay.score === null && forgedTargetDisplay.label === "Partially checked");
+for (const id of ["keyword-title", "keyword-description", "keyword-content"]) {
+	const withoutRow = ideal.checks.filter(item => item.id !== id);
+	const notAssessed = ideal.checks.map(item => item.id === id
+		? { ...item, status: "review" as const, severity: "info" as const, weight: 0, basis: "not-applicable" as const } : item);
+	for (const checks of [withoutRow, notAssessed]) {
+		let refused = false;
+		try { calculateSeoScore(checks, "article"); } catch { refused = true; }
+		check(`a configured target requires its ${id} row to be evaluated`,
+			refused && seoKeywordCheckConsistencyProblem(checks) === id && seoScoredCheckMask(checks) === null &&
+			seoScoreDisplay({ ...ideal, checks }).score === null);
+	}
+}
+const falseUnreadBody = ideal.checks.map(item => item.id === "keyword-content"
+	? { ...item, status: "review" as const, severity: "info" as const, weight: 0, basis: "unavailable" as const } : item);
+check("a configured keyword cannot claim unread body text while depth claims observed content",
+	seoKeywordCheckConsistencyProblem(falseUnreadBody) === "keyword-content" && seoScoredCheckMask(falseUnreadBody) === null &&
+	seoScoreDisplay({ ...ideal, checks: falseUnreadBody }).score === null);
+const configuredUnread = analyzeSeoContent(fixture({ document: { unsupported: true }, body: "" }));
+check("a genuinely unread configured body keeps unavailable keyword evidence and no numeric badge",
+	configuredUnread.checks.find(item => item.id === "keyword-content")?.basis === "unavailable" &&
+	configuredUnread.checks.find(item => item.id === "content-depth")?.basis === "unavailable" &&
+	seoKeywordCheckConsistencyProblem(configuredUnread.checks) === null && seoScoreDisplay(configuredUnread).score === null);
+const unexpectedUnsetPhrase = missingPostKeyword.checks.map(item => item.id === "keyword-title"
+	? ideal.checks.find(check => check.id === "keyword-title")! : item);
+check("an unset target cannot retain evaluated conditional keyword evidence",
+	seoKeywordCheckConsistencyProblem(unexpectedUnsetPhrase) === "keyword-title" &&
+	seoScoredCheckMask(unexpectedUnsetPhrase) === null &&
+	seoScoreDisplay({ ...missingPostKeyword, checks: unexpectedUnsetPhrase }).score === null);
 
 const severelyThinPost = analyzeSeoContent(
 	fixture({
@@ -955,9 +1031,10 @@ const unscored = (id: string): SeoContentCheck => ({
 	evidence: { actual: null, expected: "", source: "" }, basis: "unavailable", limitation: "not observed",
 });
 check(
-	"adding or removing unavailable checks never changes the score",
+	"adding or removing nonconditional unavailable checks never changes the score",
 	calculateSeoScore([...ideal.checks, unscored("a"), unscored("b")]).score === calculateSeoScore(ideal.checks).score &&
-		calculateSeoScore(templatePage.checks.filter((item) => item.basis !== "unavailable" && item.basis !== "not-applicable")).score === templatePage.score,
+		calculateSeoScore(templatePage.checks.filter((item) => ["keyword-title", "keyword-description", "keyword-content"].includes(item.id) ||
+			(item.basis !== "unavailable" && item.basis !== "not-applicable"))).score === templatePage.score,
 );
 let weightedUnavailableRefused = false;
 try {
@@ -1271,13 +1348,14 @@ check("the mask is order independent and agrees with the shared evaluated covera
 		const mask = seoScoredCheckMask(result.checks);
 		return mask !== null && bitCount(mask) === result.coverage.evaluated;
 	}));
-check("advisory and unknown unweighted rows never change the mask",
-	seoScoredCheckMask(ideal.checks.filter((item) => item.id !== "focus-keyword" && item.id !== "title-display-length")) === idealMask &&
+check("optional advice and unknown unweighted rows never change the mask",
+	seoScoredCheckMask(ideal.checks.filter((item) => item.id !== "title-display-length")) === idealMask &&
 	seoScoredCheckMask([...ideal.checks, unscored("custom-note")]) === idealMask);
 const titleRow = ideal.checks.find((item) => item.id === "title")!;
 const maskRefusals: Array<[string, unknown]> = [
 	["a duplicate check ID", [...ideal.checks, titleRow]],
 	["missing mandatory description evidence", ideal.checks.filter((item) => item.id !== "description")],
+	["missing mandatory focus keyword evidence", ideal.checks.filter((item) => item.id !== "focus-keyword")],
 	["unavailable mandatory title evidence", ideal.checks.map((item) => item.id === "title"
 		? { ...item, basis: "unavailable", status: "review", weight: 0, severity: "info", evidence: { ...item.evidence, actual: null } }
 		: item)],
@@ -1382,8 +1460,8 @@ const observedTwoWord = analyzeSeoContent(fixture({
 const observedSummary = seoAnalysisSummary(observedTwoWord);
 check("the observed two-word general entry keeps its exact six-check arithmetic but shows no number",
 	observedText.length === 35 && observedTwoWord.metrics.wordCount === 2 &&
-	observedTwoWord.score === 94 && observedTwoWord.calculation.earnedWeight === 48.75 &&
-	observedTwoWord.calculation.totalWeight === 52 && observedTwoWord.calculation.limit === null &&
+	observedTwoWord.score === 79 && observedTwoWord.calculation.rawScore === 94 && observedTwoWord.calculation.earnedWeight === 48.75 &&
+	observedTwoWord.calculation.totalWeight === 52 && observedTwoWord.calculation.limit?.reason === "focus-keyword-unset" &&
 	observedSummary.evaluated === 6 && observedSummary.scoredIssues === 1 &&
 	keywordEvidenceCheck(observedTwoWord, "internal-links").status === "review" &&
 	!observedSummary.numericBadgeAvailable && observedSummary.label === "Too little text to score" &&
@@ -1406,7 +1484,7 @@ const limitedReadableSample = analyzeSeoContent(fixture({
 }));
 const limitedSampleSummary = seoAnalysisSummary(limitedReadableSample);
 check("a General entry under 50 words withholds the number as Too little text to score",
-	limitedReadableSample.score === 94 && limitedSampleSummary.scoredIssues === 1 &&
+	limitedReadableSample.score === 79 && limitedReadableSample.calculation.rawScore === 94 && limitedSampleSummary.scoredIssues === 1 &&
 	limitedSampleSummary.advisorySuggestions === 2 && limitedSampleSummary.bodyLimited &&
 	limitedSampleSummary.readabilityLimited && !limitedSampleSummary.numericBadgeAvailable &&
 	limitedSampleSummary.label === "Too little text to score" && limitedSampleSummary.qualifier === "3 words of body text" &&
@@ -1424,14 +1502,14 @@ check("a fully observed control keeps its number; an unset keyword adds a Sugges
 		const keywordUnset = result === missingPostKeyword;
 		return summary.numericBadgeAvailable && !summary.bodyLimited && !summary.readabilityLimited &&
 			summary.scoredIssues === 0 && summary.advisorySuggestions === (keywordUnset ? 1 : 0) &&
-			summary.qualifier === (keywordUnset ? "No focus keyword" : null) &&
-			summary.label === "Good" && summary.tone === "good";
+			summary.qualifier === (keywordUnset ? "Add a focus keyword" : null) &&
+			summary.label === (keywordUnset ? "Needs improvement" : "Good") && summary.tone === (keywordUnset ? "review" : "good");
 	}));
-check("unobserved and template bodies withhold the number without a limit; an inspected empty article body shows its limit",
+check("unobserved and template bodies withhold the number despite known keyword readiness; an empty article shows its body limit",
 	[unknownBody, templatePage].every(result => {
 		const summary = seoAnalysisSummary(result);
 		return summary.bodyLimited && summary.readabilityLimited && !summary.numericBadgeAvailable &&
-			summary.label === "Partially checked" && result.calculation.limit === null;
+			summary.label === "Partially checked" && (result.keyword ? result.calculation.limit === null : result.calculation.limit?.reason === "focus-keyword-unset");
 	}) && (() => {
 		const summary = seoAnalysisSummary(emptySupportedBody);
 		return !summary.bodyLimited && summary.readabilityLimited && summary.numericBadgeAvailable &&
@@ -1474,7 +1552,7 @@ check("numeric badge availability and the three-field projection share the one d
 check("presentation leaves analyzer version, membership, weighted results and durable payloads unchanged",
 	JSON.stringify(scopedResults) === beforeSummaries &&
 	JSON.stringify(scopedResults.map(result => seoScoredCheckMask(result.checks))) === JSON.stringify(beforeMasks) &&
-	scopedResults.every(result => result.scoreVersion === SEO_SCORE_VERSION && result.scoreVersion === 22 &&
+	scopedResults.every(result => result.scoreVersion === SEO_SCORE_VERSION && result.scoreVersion === 24 &&
 		["summary", "numericBadgeAvailable", "bodyLimited", "readabilityLimited", "persistence", "freshness"].every(key => !Object.hasOwn(result, key))));
 check("draft publication state changes no mechanical assessment scope and creates no durable summary state",
 	draftControl.score === ideal.score && seoAnalysisSummary(draftControl).numericBadgeAvailable &&

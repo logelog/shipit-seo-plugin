@@ -21,25 +21,41 @@ A mode listed here describes the runner, not a passing test or release acceptanc
 
 ## Beta verification coverage
 
-### 0.4.0-beta.57 (unreleased)
-
-This candidate is not yet available on npm. Its checks do not change the
-verified scope of the published beta.56 package.
+### 0.4.0-beta.57
 
 | Environment | Checked scope |
 | --- | --- |
-| Native EmDash/admin 1.3.1 on Node/SQLite | Package build, both typechecks, engine and admin selfchecks through quick verification |
-| Hosted Workers/D1 with EmDash and Cloudflare adapter 1.3.1 | Exact-archive update on an existing site, production build, deployment, automatic browser checks for explicitly mapped custom blocks, preserved published content, and public sitemap/robots.txt/llms.txt responses |
+| Native EmDash/admin 1.3.0 on Node/SQLite | Build, types, engine and admin selfchecks, public-output and SQLite checks, exact-archive npm/pnpm consumers, Social save/recovery, beta.56-to-beta.57 package/database recovery, and pnpm removal/reinstallation |
+| Native EmDash/admin 1.3.1 on Node/SQLite | Package build, both typechecks, and engine and admin selfchecks through quick verification |
+| Packed IndexNow on native 1.3.1 | Seven setup, existing-file reuse, retry and manual-key preservation cases through the installed native API adapter with mocked HTTP ports |
+| Workers/D1 build preparation with EmDash and Cloudflare adapter 1.3.1 | Exact-archive installation with all package files matched, production build, 10 route checks, 25 export checks and an offline deployment dry run |
 
-The hosted checks cover the existing shipitseo.com installation. Its browser
-cases used the General content profile with no focus keyword; each opened
-with a score below Good while optional server analysis remained off. Article
-length limits and incomplete-body handling were checked locally. This does
-not qualify every Workers installation or its complete update and recovery
-lifecycle. Workers/D1 remains experimental.
+The exact archive also passed 24 saved-content scoring cases across Portable
+Text and Tiptap, and 56 Social save/recovery cases. The packed IndexNow checks
+used no real network requests or provider submissions; they do not establish
+HTTP authentication behavior, Workers transport or live delivery.
 
-See [content checks](content-checks.md) for the scoring rules and custom-block
-mapping requirements in this candidate.
+Full native 1.3.1 verification, every lifecycle UI flow, native SEO dirty-draft
+and lost-acknowledgement recovery, full editor locale switching, and npm
+update/removal/reinstallation remain unqualified. Workers/D1 remains
+experimental: the offline build checks do not establish live deployment,
+IndexNow setup, provider delivery or complete installation and recovery
+workflows for this archive. Postgres and sandbox/registry installation remain
+unqualified.
+
+#### Earlier beta.57 hosted preview
+
+An earlier beta.57 archive was updated on an existing Workers/D1 site. That
+preview passed production build and deployment, automatic browser checks for
+explicitly mapped custom blocks, preserved-content checks, and public
+sitemap/robots.txt/llms.txt responses.
+
+Those browser cases used the General content profile with no focus keyword;
+each opened below Good while optional server analysis remained off. These
+earlier results do not qualify later archive bytes or their IndexNow changes.
+
+See [content checks](content-checks.md) for scoring rules and custom-block
+mapping requirements.
 
 ### 0.4.0-beta.56
 

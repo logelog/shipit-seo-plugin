@@ -105,6 +105,13 @@ check(() => {
 	assert.doesNotMatch(indexNow, /onClick=\{\(\) => void turnOff\(\)\}>Turn off/, "the trigger never turns IndexNow off directly");
 	assert.match(indexNow, /<Dialog\.Root role="alertdialog" open=\{pageActive && turnOffOpen\}[\s\S]*?Queued and retrying URLs stop being sent[\s\S]*?>Cancel<\/Button>[\s\S]*?variant="destructive"[\s\S]*?void turnOff\(\)\.then\(\(\) => setTurnOffOpen\(false\)\)/);
 	assert.doesNotMatch(indexNow, /Google (?:uses|supports|receives) IndexNow/i);
+	assert.match(indexNow, /<p>\{setupCopy\.description\}<\/p>/, "setup introduction follows the reported file owner");
+	assert.match(indexNow, /description=\{indexNowKeyLocationHelp\(status\.setup\.keyRoute, view\.advanced\.values\.keyLocation\)\}/,
+		"advanced file help follows ownership and the current location draft");
+	assert.match(indexNow, /This key verifies your site\. It is public in the verification file\./);
+	assert.doesNotMatch(indexNow, /Replace it only if it was exposed|Served at \/indexnow-key\.txt by this plugin's installation/,
+		"public keys are not described as secrets and site-owned files are not claimed by the plugin");
+	assert.match(declarationIn(indexNow, "setupSteps"), /running \? "Preparing"/, "an existing site's key is not presented as being generated");
 	assert.match(indexNow, /Noindexed entries are skipped, including every entry of a content type with a noindex rule in Indexing rules\./,
 		"automatic submission names the content type rule it follows");
 });

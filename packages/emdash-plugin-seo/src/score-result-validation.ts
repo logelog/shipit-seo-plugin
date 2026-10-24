@@ -2,9 +2,11 @@ import {
 	SEO_SCORE_VERSION,
 	aggregateSeoChecks,
 	seoContentCheckProblem,
+	seoKeywordCheckConsistencyProblem,
 	type SeoContentCheck,
 	type SeoScoreLimit,
 } from "./analysis.ts";
+import { normaliseSeoKeywordText } from "./keyword-match.ts";
 import { isCollectionAnalysisProfileSelection } from "./collection-analysis-profile.ts";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -26,12 +28,19 @@ export function currentSeoScoreAssessmentProblem(value: unknown): string | null 
 	if (!Array.isArray(value.checks)) return "checks";
 	const profile = isCollectionAnalysisProfileSelection(value.assessmentProfile) ? value.assessmentProfile.profile : undefined;
 	if (value.checks.some((check) => seoContentCheckProblem(check, true, profile) !== null)) return "checks.row";
+	if (seoKeywordCheckConsistencyProblem(value.checks as SeoContentCheck[]) !== null) return "checks.aggregate";
 	let aggregate: ReturnType<typeof aggregateSeoChecks>;
 	try {
 		aggregate = aggregateSeoChecks(value.checks as SeoContentCheck[], profile);
 	} catch {
 		return "checks.aggregate";
 	}
+	const focus = value.checks.find((check: SeoContentCheck) => check.id === "focus-keyword");
+	const keyword = focus?.evidence.actual;
+	if (keyword === null ? value.keyword !== undefined :
+		typeof keyword !== "string" || typeof value.keyword !== "string" || value.keyword !== value.keyword.trim() ||
+		!normaliseSeoKeywordText(value.keyword) || normaliseSeoKeywordText(keyword) !== normaliseSeoKeywordText(value.keyword))
+		return "keyword";
 	if (value.score !== aggregate.score) return "score";
 	if (value.status !== aggregate.status) return "status";
 	if (value.grade !== aggregate.grade) return "grade";

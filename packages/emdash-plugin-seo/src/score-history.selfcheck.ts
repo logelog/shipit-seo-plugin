@@ -28,6 +28,7 @@ function score(input: {
 	sourceUpdatedAt: string;
 	analysisRevision?: number;
 	missingMetadata?: readonly ("title" | "description")[];
+	focusKeyword?: string;
 	/** A saved Portable Text body; without one the entry is template-managed and shows no number. */
 	document?: unknown;
 }): SeoAdminContentScore {
@@ -44,6 +45,7 @@ function score(input: {
 			publicationStatus: "published",
 			body: "",
 			...(input.document === undefined ? { bodySource: "template" } : { document: input.document }),
+			focusKeyword: input.focusKeyword,
 			assessmentProfile: { profile: "article", version: 1 },
 			schemaEnabled: false,
 			schemaPreset: "WebPage",
@@ -51,9 +53,9 @@ function score(input: {
 		}),
 		assessmentProfileRevision: "profile-1",
 		analysisRevision: input.analysisRevision ?? 1,
-		profileKeywords: null,
-		focusKeywordSource: "none",
-		keywords: [],
+		profileKeywords: input.focusKeyword ? [input.focusKeyword] : null,
+		focusKeywordSource: input.focusKeyword ? "profile" : "none",
+		keywords: input.focusKeyword ? [input.focusKeyword] : [],
 		updatedAt: input.capturedAt,
 		templateUpdatedAt: "2026-07-01T00:00:00.000Z",
 		modulesUpdatedAt: "2026-07-01T00:00:00.000Z",
@@ -1148,20 +1150,21 @@ const trendBody = [
 	]),
 	...Array.from({ length: 60 }, () => trendParagraph("Small teams review their goals each week and keep notes.")),
 ];
+const trendKeyword = "planning";
 const alphaBaseline = score({
-	ref: "posts:alpha", title: "Alpha", missingMetadata: ["title"], document: trendBody,
+	ref: "posts:alpha", title: "Alpha planning", focusKeyword: trendKeyword, missingMetadata: ["title"], document: trendBody,
 	capturedAt: "2026-07-10T09:00:00.000Z", sourceUpdatedAt: "2026-07-10T08:00:00.000Z",
 });
 const betaBaseline = score({
-	ref: "posts:beta", title: "Beta", document: trendBody,
+	ref: "posts:beta", title: "Beta planning", focusKeyword: trendKeyword, document: trendBody,
 	capturedAt: "2026-07-10T10:00:00.000Z", sourceUpdatedAt: "2026-07-10T09:00:00.000Z",
 });
 const alphaCurrent = score({
-	ref: "posts:alpha", title: "Alpha", document: trendBody,
+	ref: "posts:alpha", title: "Alpha planning", focusKeyword: trendKeyword, document: trendBody,
 	capturedAt: "2026-07-14T09:00:00.000Z", sourceUpdatedAt: "2026-07-14T08:00:00.000Z",
 });
 const betaCurrent = score({
-	ref: "posts:beta", title: "Beta", missingMetadata: ["description"], document: trendBody,
+	ref: "posts:beta", title: "Beta planning", focusKeyword: trendKeyword, missingMetadata: ["description"], document: trendBody,
 	capturedAt: "2026-07-14T10:00:00.000Z", sourceUpdatedAt: "2026-07-14T09:00:00.000Z",
 });
 const trendSnapshots = [alphaBaseline, betaBaseline, alphaCurrent, betaCurrent].map(createScoreSnapshot);
@@ -1169,9 +1172,17 @@ assert.ok(trendSnapshots.every((item) => item.unscored === undefined && item.com
 	"a fully observed body gives numbered, comparable snapshots");
 assert.ok(alphaCurrent.score > alphaBaseline.score, "adding missing title metadata improves the computed saved checks");
 assert.ok(betaBaseline.score > betaCurrent.score, "removing description metadata declines the computed saved checks");
-assert.equal(alphaBaseline.calculation?.rawScore, 80);
+for (const item of [alphaBaseline, betaBaseline, alphaCurrent, betaCurrent]) {
+	assert.equal(item.keyword, trendKeyword);
+	assert.equal(item.checks.find(check => check.id === "keyword-content")?.status, "pass",
+		"the saved planning-guide link supports the selected target");
+	assert.equal(item.calculation?.totalWeight, 83);
+}
+assert.equal(alphaBaseline.calculation?.earnedWeight, 65, "missing title and keyword-in-title lose 18 of 83 points");
+assert.equal(alphaBaseline.calculation?.rawScore, 78);
 assert.equal(alphaBaseline.score, 49, "a missing title limits the score to 49");
-assert.equal(betaCurrent.score, 80, "a missing description loses its weight without a limit");
+assert.equal(betaCurrent.calculation?.earnedWeight, 66, "missing description and keyword-in-description lose 17 of 83 points");
+assert.equal(betaCurrent.score, 80, "missing description checks decline the score without a readiness cap");
 assert.equal(alphaCurrent.score, betaBaseline.score);
 assert.equal(alphaCurrent.score, 100);
 const trends = buildScoreTrends(trendSnapshots, {
@@ -1188,9 +1199,9 @@ assert.equal(trends.summary.currentAverage, Math.round((alphaCurrent.score + bet
 assert.equal(trends.summary.currentAverage, 90);
 assert.equal(trends.comparison.scoreDelta, 15);
 assert.equal(trends.comparison.direction, "improved");
-assert.equal(trends.summary.openIssues, 1);
-assert.equal(trends.comparison.resolvedIssues, 1);
-assert.equal(trends.comparison.openedIssues, 1);
+assert.equal(trends.summary.openIssues, 2, "description presence and keyword placement both remain unresolved");
+assert.equal(trends.comparison.resolvedIssues, 2, "title presence and keyword placement improve together");
+assert.equal(trends.comparison.openedIssues, 2, "description presence and keyword placement decline together");
 assert.equal(trends.comparison.improvedEntries, 1);
 assert.equal(trends.comparison.declinedEntries, 1);
 assert.equal(trends.topIssues[0]?.id, "description");

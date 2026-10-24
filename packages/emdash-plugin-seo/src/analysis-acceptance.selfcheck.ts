@@ -20,7 +20,7 @@ import { buildScoreTrends, createScoreSnapshot } from "./score-history.ts";
 import { currentSeoScoreAssessmentProblem } from "./score-result-validation.ts";
 
 /**
- * Engine rows of the analyzer 22 Acceptance table in docs/score-checklist-contract.md.
+ * Engine rows of the current Acceptance table in docs/score-checklist-contract.md.
  * Fixtures follow the contract: published, canonical matching, social image set,
  * no images unless stated, and the body as a saved Portable Text array.
  */
@@ -168,8 +168,8 @@ check("Article length boundaries share the same status, limit and numeric displa
 		assert.equal(result.metrics.wordCount, words);
 		assert.equal(depth.status, words >= 600 ? "pass" : words >= 300 ? "review" : "fail");
 		assert.equal(depth.weight, 10);
-		assert.equal(result.calculation.limit?.cap ?? null, words < 50 ? 40 : words < 600 ? 70 : null);
-		assert.equal(result.score, words < 50 ? 40 : words < 600 ? 70 : 100);
+		assert.equal(result.calculation.limit?.cap ?? null, words < 50 ? 40 : words < 600 ? 70 : 79);
+		assert.equal(result.score, words < 50 ? 40 : words < 600 ? 70 : 79);
 		assert.equal(seoScoreDisplay(result).score, result.score);
 		assert.equal(currentSeoScoreAssessmentProblem(JSON.parse(JSON.stringify(result))), null);
 	}
@@ -256,7 +256,7 @@ check("General, 2 words: dash, Too little text to score", () => {
 	const result = analyze({ document: [paragraph("Hello world")], assessmentProfile: GENERAL });
 	const display = seoScoreDisplay(result);
 	assert.deepEqual([display.score, display.band, display.label, display.qualifier], [null, null, "Too little text to score", "2 words of body text"]);
-	assert.equal(result.calculation.limit, null, "General entries carry no word-count limit");
+	assert.equal(result.calculation.limit?.reason, "focus-keyword-unset", "General entries carry keyword readiness, never a word-count limit");
 });
 
 check("General, 61 words, no links: number shown, Internal links Partly met, short-text Suggestion", () => {
@@ -266,9 +266,9 @@ check("General, 61 words, no links: number shown, Internal links Partly met, sho
 	const depth = row(result, "content-depth");
 	assert.deepEqual([depth.status, depth.weight, classifySeoContentCheck(depth).role], ["review", 0, "advisory"]);
 	assert.match(depth.detail, /^Short body text: 61 words\./);
-	assert.deepEqual([result.calculation.earnedWeight, result.calculation.totalWeight, result.score], [52.75, 56, 94]);
+	assert.deepEqual([result.calculation.earnedWeight, result.calculation.totalWeight, result.score], [52.75, 56, 79]);
 	const display = seoScoreDisplay(result);
-	assert.deepEqual([display.score, display.label, display.issues, display.suggestions], [94, "Good", 1, 2]);
+	assert.deepEqual([display.score, display.label, display.issues, display.suggestions], [79, "Needs improvement", 1, 2]);
 	const headings = row(result, "heading-structure");
 	assert.deepEqual([headings.basis, headings.detail], ["not-applicable", "Short general content: under 300 words without section headings."],
 		"rule 2: general heading advice does not apply below 300 words without headings");
@@ -327,15 +327,15 @@ check("3-word phrase 4 times in 300 words: Repetition Passed", () => {
 	assert.equal(result.calculation.limits.some((limit) => limit.reason === "keyword-repetition"), false);
 });
 
-check("No keyword: number with No focus keyword and a Suggestion that offers to add one", () => {
+check("No keyword: 79 Needs improvement and an actionable focus keyword qualifier", () => {
 	const result = analyze({ document: fullArticleBody() });
 	const keyword = row(result, "focus-keyword");
 	assert.deepEqual([keyword.status, keyword.basis, keyword.weight, classifySeoContentCheck(keyword).role], ["review", "measured", 0, "advisory"]);
 	assert.match(keyword.recommendation, /^Add a focus keyword/);
 	for (const id of ["keyword-title", "keyword-description", "keyword-content", "keyword-repetition"]) assert.equal(row(result, id).basis, "not-applicable", id);
-	assert.deepEqual([result.score, result.calculation.totalWeight], [100, 75]);
+	assert.deepEqual([result.score, result.calculation.totalWeight], [79, 75]);
 	const display = seoScoreDisplay(result);
-	assert.deepEqual([display.score, display.label, display.qualifier, display.suggestions], [100, "Good", "No focus keyword", 1]);
+	assert.deepEqual([display.score, display.label, display.qualifier, display.suggestions], [79, "Needs improvement", "Add a focus keyword", 1]);
 });
 
 const JAPANESE_PARAGRAPH = "小さな会社では毎週の目標を確認しながら、顧客の声を丁寧に集めてサービスを改善しています。" +
@@ -372,7 +372,7 @@ check("Custom blocks with a short paragraph: Body text length Not checked; dash"
 	const depth = row(result, "content-depth");
 	assert.deepEqual([depth.basis, depth.status, depth.weight], ["unavailable", "review", 0]);
 	assert.match(depth.detail, /^6 words read\. Some blocks in this body are not read, for example custom blocks/);
-	assert.deepEqual(result.calculation.limits, [], "an unread row never limits the score");
+	assert.deepEqual(result.calculation.limits.map(limit => limit.reason), ["focus-keyword-unset"], "an unread row adds no body limit");
 	const display = seoScoreDisplay(result);
 	assert.deepEqual([display.score, display.band, display.label], [null, null, "Partially checked"]);
 	const passing = analyze({ document: [callToAction, ...fullArticleBody()] });
@@ -400,7 +400,7 @@ check("Template body field: dash, Partially checked; excluded from averages", ()
 	const numbered = analyze({ ref: "posts:numbered", entryId: "numbered", document: fullArticleBody() });
 	const trends = buildScoreTrends([templateSnapshot, createScoreSnapshot(storedScore(numbered, "2026-10-16T11:00:00.000Z"))],
 		{ days: 7, now: new Date("2026-10-17T12:00:00.000Z") });
-	assert.deepEqual([trends.summary.snapshotCount, trends.summary.trackedEntries, trends.summary.currentAverage], [2, 1, 100]);
+	assert.deepEqual([trends.summary.snapshotCount, trends.summary.trackedEntries, trends.summary.currentAverage], [2, 1, 79]);
 });
 
 check("Too long for phones: Suggestion naming phones and the cut point, marked estimate", () => {
@@ -414,7 +414,7 @@ check("Too long for phones: Suggestion naming phones and the cut point, marked e
 	assert.match(fit.limitation, /measures the resolved text, including what a metadata template adds, such as the site name in a title/);
 	assert.match(fit.limitation, /text the theme adds when it renders the page is not included/);
 	assert.doesNotMatch(`${fit.detail} ${fit.recommendation} ${fit.limitation}`, /characters?\b/, "no character limit is cited");
-	assert.equal(result.score, 100, "fit advice never changes the number");
+	assert.equal(result.score, 79, "fit advice never changes keyword readiness");
 });
 
 check("Production browser checks: the server reads the same body text the browser checks read", () => {

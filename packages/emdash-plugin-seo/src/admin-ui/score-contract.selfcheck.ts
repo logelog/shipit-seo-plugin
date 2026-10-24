@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { analyzeSeoContent, seoAnalysisPresentation, summarizeSeoChecks, type SeoAnalysisInput } from "../analysis.ts";
+import { analyzeSeoContent, seoAnalysisPresentation, seoScoreBand, summarizeSeoChecks, type SeoAnalysisInput } from "../analysis.ts";
 import {
 	SEO_ADMIN_CONTRACT_VERSION, SEO_ENGINE_VERSION, SEO_SCORE_VERSION,
 	type SeoAdminContentScore, type SeoAdminScoreSnapshot,
@@ -111,8 +111,8 @@ check("analyzer19 remains a stale readable observation without current aggregate
 
 function overview(item: SeoAdminContentScore) {
 	const presentation = seoAnalysisPresentation(item);
-	// Suggestions never count; only Failed and Partly met rows need attention.
-	const needsAttention = summarizeSeoChecks(item.checks).issues > 0;
+	// Suggestions never count; Failed and Partly met rows and a score below Good need attention.
+	const needsAttention = summarizeSeoChecks(item.checks).issues > 0 || seoScoreBand(item.score) !== "good";
 	return {
 		contractVersion: SEO_ADMIN_CONTRACT_VERSION, generatedAt: item.updatedAt, engineVersion: SEO_ENGINE_VERSION,
 		readiness: { score: 80, state: "ready", title: "Ready", description: "Saved configuration" },
@@ -123,30 +123,57 @@ function overview(item: SeoAdminContentScore) {
 	};
 }
 const longText = (count: number) => Array.from({ length: count }, (_, index) => `Readers compare practical examples before choosing a useful next step number ${index}.`).join(" ");
-const goodWithSuggestions = score({
-	focusKeywords: [], assessmentProfile: { profile: "general", version: 1 },
+const generalText: Partial<SeoAnalysisInput> = {
+	assessmentProfile: { profile: "general", version: 1 },
 	document: [
 		...input.document as unknown[],
 		{ _type: "block", style: "normal", markDefs: [], children: [{ _type: "span", text: longText(6), marks: [] }] },
 	],
-});
+};
+const goodWithSuggestions = score(generalText);
+const keywordUnset = score({ ...generalText, focusKeywords: [] });
 check("Overview accepts numbered shared projections with their band and qualifier", () => {
-	for (const item of [current, score({ title: "" }), goodWithSuggestions]) {
+	for (const item of [current, score({ title: "" }), score({ focusKeywords: [] }), goodWithSuggestions, keywordUnset]) {
 		const value = overview(item);
 		assert.deepEqual(parseSeoAdminOverview(value).content[0]?.presentation, seoAnalysisPresentation(item));
 	}
 	const poor = parseSeoAdminOverview(overview(current)).content[0]!;
 	assert.deepEqual([poor.presentation, poor.needsAttention], [{ label: "Poor", qualifier: "Limited to 40: under 50 words of body text", tone: "poor" }, true]);
+	const unsetPoor = parseSeoAdminOverview(overview(score({ focusKeywords: [] }))).content[0]!;
+	assert.deepEqual([unsetPoor.presentation, unsetPoor.needsAttention], [{ label: "Poor", qualifier: "Limited to 40: under 50 words of body text. No focus keyword", tone: "poor" }, true]);
 });
 
-check("needs attention counts issues only; suggestions alone never flag an entry", () => {
+check("suggestions alone never flag an entry", () => {
 	const summary = summarizeSeoChecks(goodWithSuggestions.checks);
 	assert.equal(summary.issues, 0);
 	assert.ok(summary.advisories > 0);
 	const parsed = parseSeoAdminOverview(overview(goodWithSuggestions));
-	assert.deepEqual(parsed.content[0]?.presentation, { label: "Good", qualifier: "No focus keyword", tone: "good" });
+	assert.deepEqual(parsed.content[0]?.presentation, { label: "Good", qualifier: null, tone: "good" });
 	assert.equal(parsed.content[0]?.needsAttention, false);
 	assert.equal(parsed.summary.needsAttention, 0);
+});
+
+check("an unset focus keyword keeps its number below Good and needs attention without a Failed or Partly met row", () => {
+	assert.equal(goodWithSuggestions.score, 100, "control: the same rows with a keyword are Good");
+	assert.equal(summarizeSeoChecks(keywordUnset.checks).issues, 0);
+	const value = overview(keywordUnset);
+	const parsed = parseSeoAdminOverview(value);
+	assert.deepEqual([parsed.content[0]?.score, parsed.content[0]?.presentation, parsed.content[0]?.needsAttention, parsed.summary.needsAttention],
+		[79, { label: "Needs improvement", qualifier: "Add a focus keyword", tone: "review" }, true, 1]);
+	const unflagged = { ...value, summary: { ...value.summary, needsAttention: 0 }, content: [{ ...value.content[0], needsAttention: false }] };
+	assert.throws(() => parseSeoAdminOverview(unflagged), /content item/);
+});
+
+check("inconsistent keyword evidence is partially checked and never crosses the score boundary", () => {
+	const focusRow = (item: SeoAdminContentScore) => item.checks.find((check) => check.id === "focus-keyword")!;
+	for (const item of [
+		{ ...keywordUnset, checks: keywordUnset.checks.map((check) => check.id === "focus-keyword" ? focusRow(goodWithSuggestions) : check) },
+		{ ...goodWithSuggestions, checks: goodWithSuggestions.checks.map((check) => check.id === "focus-keyword" ? focusRow(keywordUnset) : check) },
+	]) {
+		assert.deepEqual(seoAnalysisPresentation(item), { label: "Partially checked", qualifier: "Keyword checks could not be confirmed", tone: "neutral" });
+		assert.throws(() => parseSeoAdminContentScores(contentEnvelope(item)), /contentScores\.items/);
+		assert.throws(() => parseSeoAdminOverview(overview(item)), /content item/);
+	}
 });
 
 const overviewFixture = overview(current);
@@ -171,9 +198,11 @@ check("band projections accept only their own band, tone and qualifiers", () => 
 	for (const [presentation, needsAttention, rowScore] of [
 		[{ label: "Good", qualifier: null, tone: "good" }, false, 85],
 		[{ label: "Good", qualifier: null, tone: "good" }, true, 80],
-		[{ label: "Good", qualifier: "No focus keyword", tone: "good" }, false, 100],
 		[{ label: "Needs improvement", qualifier: "Limited to 79: under 100 words of body text", tone: "review" }, true, 79],
+		[{ label: "Needs improvement", qualifier: "Add a focus keyword", tone: "review" }, true, 79],
 		[{ label: "Needs improvement", qualifier: "No focus keyword", tone: "review" }, true, 50],
+		[{ label: "Needs improvement", qualifier: "Limited to 70: under 600 words of body text. No focus keyword", tone: "review" }, true, 70],
+		[{ label: "Poor", qualifier: "Add a focus keyword", tone: "poor" }, true, 35],
 		[{ label: "Poor", qualifier: "Limited to 40: under 50 words of body text", tone: "poor" }, true, 40],
 		[{ label: "Poor", qualifier: "Limited to 40: under 50 words of body text. No focus keyword", tone: "poor" }, true, 40],
 		[{ label: "Poor", qualifier: null, tone: "poor" }, true, 0],
@@ -201,6 +230,13 @@ check("band projections cannot carry another band, tone, qualifier or attention 
 		[{ label: "Needs improvement", qualifier: null, tone: "review" }, false, 70],
 		[{ label: "Poor", qualifier: null, tone: "poor" }, false, 30],
 		[{ label: "Poor", qualifier: null, tone: "review" }, true, 30],
+		[{ label: "Good", qualifier: "Add a focus keyword", tone: "good" }, false, 80],
+		[{ label: "Good", qualifier: "No focus keyword", tone: "good" }, false, 100],
+		[{ label: "Good", qualifier: "Limited to 85: under 600 words of body text. No focus keyword", tone: "good" }, false, 85],
+		[{ label: "Needs improvement", qualifier: "Add a focus keyword", tone: "review" }, false, 79],
+		[{ label: "Needs improvement", qualifier: "Add a focus keyword. No focus keyword", tone: "review" }, true, 79],
+		[{ label: "Needs improvement", qualifier: "Limited to 79: under 600 words of body text", tone: "review" }, true, 70],
+		[{ label: "Poor", qualifier: "No focus keyword. Limited to 40: under 50 words of body text", tone: "poor" }, true, 40],
 		[{ label: "Partially checked", qualifier: "6 weighted checks not checked", tone: "neutral" }, false, 100],
 		[{ label: "Too little text to score", qualifier: "2 words of body text", tone: "neutral" }, false, 94],
 		[{ label: "Unexpected label", qualifier: null, tone: "neutral" }, false, 50],

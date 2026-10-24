@@ -21,9 +21,14 @@ manifest and lockfile. For SQLite, use a consistent backup that includes
 committed WAL data; copying the main database alone can omit saved changes.
 Do not reset, reseed or import content to install the plugin.
 
-Cloudflare Workers/D1, Postgres and sandbox/registry installation are outside
-this beta's verified scope. Earlier @shipit-scoped alpha installations have no
-supported migration path to this package; treat that transition separately.
+Workers/D1 coverage is experimental. The recorded beta.56 checks do not
+qualify later archives; review the version-specific
+[compatibility coverage](https://github.com/logelog/shipit-seo-plugin/blob/main/docs/compatibility.md)
+before using that runtime. Postgres and sandbox/registry installation remain
+unqualified.
+
+Earlier @shipit-scoped alpha installations have no supported migration path to
+this package; treat that transition separately.
 See [the package limits](README.md#limits).
 
 ## 2. Install the exact beta
@@ -31,13 +36,13 @@ See [the package limits](README.md#limits).
 For an npm site:
 
 ```sh
-npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.56
+npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.57
 ```
 
 For a pnpm site, use this instead:
 
 ```sh
-pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.56
+pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.57
 ```
 
 Use one package manager and one lockfile. Review the dependency changes;

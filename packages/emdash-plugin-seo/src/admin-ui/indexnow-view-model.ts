@@ -11,10 +11,57 @@ import {
 	type SeoAdminIndexNowHistoryPage,
 	type SeoAdminIndexNowHistoryResult,
 	type SeoAdminIndexNowSubmission,
+	type SeoAdminIndexNowStatus,
 } from "@shipitseo/emdash-plugin-seo/admin-contract";
 
 export const INDEXNOW_MANUAL_URL_LIMIT = CONTRACT_MANUAL_URL_LIMIT;
 export const INDEXNOW_MANUAL_TEXT_LIMIT = INDEXNOW_MANUAL_URL_LIMIT * 2_050;
+
+export function indexNowSetupCopy(status: {
+	setup: Pick<SeoAdminIndexNowStatus["setup"], "installation" | "keyRoute" | "keySaved">;
+	values: Pick<IndexNowSettingsValues, "keyLocation">;
+}) {
+	const defaultLocation = status.values.keyLocation === "/indexnow-key.txt";
+	const existingFile = defaultLocation && status.setup.keyRoute === "existing";
+	const reuseKey = existingFile && status.setup.installation === "astro" && !status.setup.keySaved;
+	return {
+		description: !defaultLocation
+			? "Enable IndexNow checks your custom verification file, then turns delivery on."
+			: existingFile
+				? reuseKey
+					? "Enable IndexNow reuses the valid key in this site's file, checks it, then turns delivery on."
+					: "Enable IndexNow checks the saved key against this site's file, then turns delivery on."
+				: status.setup.keyRoute === "injected"
+					? "Enable IndexNow creates and checks the public key file, then turns delivery on. No copying or pasting."
+					: "Enable IndexNow prepares the key, checks its public file, then turns delivery on.",
+		keyTitle: status.setup.keySaved ? "Use the saved key" : reuseKey ? "Use the site's key" : "Create a key",
+		keyDescription: status.setup.keySaved
+			? "Saved for this site. Delivery stays off until the check passes."
+			: reuseKey
+				? "A valid key in the site's existing file is reused automatically."
+				: "Created automatically when you turn IndexNow on.",
+		fileDescription: !defaultLocation
+			? "Read the custom verification file at its public address."
+			: existingFile
+				? "Read the site's existing verification file at its public address."
+				: status.setup.keyRoute === "injected"
+					? "Read the file served by this plugin at your public site address."
+					: "Read from your site address to confirm the site is yours.",
+	};
+}
+
+export function indexNowKeyLocationHelp(
+	keyRoute: SeoAdminIndexNowStatus["setup"]["keyRoute"],
+	keyLocation: string,
+): string {
+	if (keyLocation.trim() && keyLocation !== "/indexnow-key.txt") {
+		return "This custom file must serve the saved key as plain text. The plugin does not replace it.";
+	}
+	if (keyRoute === "injected") return "The plugin serves the saved key at /indexnow-key.txt. No file upload is needed.";
+	if (keyRoute === "existing") return "The site owns /indexnow-key.txt. Its contents must match the saved key; the plugin does not replace this file.";
+	if (keyRoute === "unavailable") return "This installation cannot serve /indexnow-key.txt. Check its public site address and root path.";
+	return "The public file must serve the saved key. Check its location before enabling IndexNow.";
+}
 
 export type IndexNowUrlIssueReason = "format" | "other-site" | "too-long";
 

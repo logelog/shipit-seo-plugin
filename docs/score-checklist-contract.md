@@ -1,4 +1,4 @@
-# Score and checklist contract (analyzer 22)
+# Score and checklist contract (analyzer 24)
 
 The score is a checklist result, not a search-engine score or ranking
 prediction. One engine and presentation model serve basic browser checks,
@@ -27,9 +27,9 @@ They do not apply to the General content profile.
    **Passed**. Unavailable: **Not checked**. Not applicable: no row. Earlier
    analyzer: **Earlier result**. Each policy lists its allowed outcomes, and
    the engine refuses others.
-2. **Not applicable is structural:** no focus keyword, no secondary keywords,
-   no images, image alt checks off, no links, no section headings, a body
-   format without links or headings, an opaque slug, no title or description
+2. **Not applicable is structural:** conditional phrase checks without a
+   focus keyword, no secondary keywords, no images, image alt checks off, no
+   links, no section headings, a body format without links or headings, an opaque slug, no title or description
    to fit, `nosnippet`, an unpublished entry's indexing directive, the
    profile, no body text for keyword placement advice, a title without the
    focus keyword for phone visibility (the title row already fails), general
@@ -41,16 +41,21 @@ They do not apply to the General content profile.
 3. **Words** are counted with `Intl.Segmenter` word segments when available,
    otherwise whitespace, over all extracted body text. Keywords in scripts
    written without spaces match as substrings. Browser and server use the same
-   extractor. Unsupported blocks can only add words: a short count with such
-   blocks is **Not checked**, a passing count stands. Browser checks mark the
-   body image and secondary keyword rows **Not checked** only when the saved
-   data has no own `content` field, the one case in which the server can read
-   another body field; otherwise both sides evaluate them from the same body.
+   extractor. Unconfigured unsupported blocks can only add words: a short count
+   with such blocks is **Not checked**, a passing lower-bound count stands.
+   Explicit custom-block mappings select visible fields and block versions;
+   an unknown version, malformed selected value or extraction limit withholds
+   complete-body checks and the numeric badge. Browser and server apply the
+   same mapping to the same saved snapshot. A mapped body field also works
+   when its name is not `content`. Mapping identity participates in saved
+   result freshness and input capture. Template text and transcluded entries
+   are outside saved-body checks.
 4. **Score** is `round(100 x earned / available)` over evaluated scored rows.
    Partly met earns 35%. Limits are derived from rows; the lowest applies and
    the active cap is named beside the score. Full calculations remain in the analysis result, not the editor summary:
    - missing title: 49;
    - article body under 50 words: 40; 50 to 599 words: 70;
+   - no focus keyword configured: 79;
    - focus keyword repetition failed: 79;
    - focus keyword in none of title, description and body text: 79.
 5. **Number** requires every weighted row to have been evaluated. Opening an
@@ -72,8 +77,9 @@ They do not apply to the General content profile.
 7. **Counts.** Issues are Failed or Partly met rows. A group pill reads
    `N issues[, M suggestions]`, else `M suggestions`, else `K not checked`,
    else **All good** when a row applies, else **Not applicable**. The header
-   shows the sums of the group counts from one function. Needs-attention
-   overview counts use issues only.
+   shows the sums of the group counts from one function. An overview entry
+   needs attention when it has scored issues or a displayed score below
+   **Good**.
 8. **Rows.** Order: Failed, Partly met, Suggestion, Not checked, Passed;
    heavier first. Each row shows icon, label and status word on line 1, with
    the whole label at narrow widths. Only a Failed, Partly met or Suggestion
@@ -84,12 +90,17 @@ They do not apply to the General content profile.
    since the slug is edited in the host. Detail,
    recommendation (also for Not checked), evidence and basis open on demand.
    Not-applicable rows collapse into one closed `N not applicable` list.
-9. **Keywords are optional.** Without one, the number carries the qualifier
-   **No focus keyword**, after the limit text when a limit lowered the number,
-   and a Suggestion row offers **Add keyword**. With one,
-   that row is hidden and a missing primary keyword fails title, description
-   and body text rows. URL and placement checks are advice. Secondary keywords
-   feed advice only.
+9. **Keywords are optional.** Without one, the score cannot reach **Good**:
+   its maximum is 79, and lower limits still apply, including **Poor** results.
+   An **Add keyword** action focuses the field. The summary says
+   **Add a focus keyword**, or retains a lower limit with **No focus keyword**.
+   The measured focus-keyword evidence must agree with the normalized saved target.
+   Configured targets require evaluated title and description checks. Their
+   body check is evaluated, or **Not checked** together with body length when
+   the body is unread. Unset targets leave those three checks not applicable.
+   With a target, the focus-keyword row is hidden; a missing primary phrase
+   fails the title, description and body text rows. URL and placement checks
+   are advice. Secondary keywords feed advice only.
 10. **Repetition**: a known body under 100 words makes the ratio not applicable.
     At 100 words or more, occurrences divided by body words above 3.5% with at
     least 3 occurrences fails **Focus keyword repetition**. Feedback states the
@@ -115,8 +126,8 @@ They do not apply to the General content profile.
 13. **Accessibility.** The ring is `role="img"` named "SEO score N out of 100"
     or "No SEO score"; rows are list items; pills and statuses are text; dark
     pills use `[data-mode="dark"]`; no live region on the score.
-14. **Versioning.** Analyzer 22 uses admin contract 47 and the current
-    comparison policy. Analyzer 21 and earlier results stay
+14. **Versioning.** Analyzer 24 uses admin contract 48 and the current
+    comparison policy. Analyzer 23 and earlier results stay
     readable in history but never render as a current number, band or meter
     and never enter current comparisons. They read **Earlier analyzer. Analyze
     again.** A scan resumed
@@ -172,7 +183,7 @@ no body images unless stated, and saved Portable Text.
 | Known body under 100 words, phrase used 3 times | Repetition not applicable; no spam claim |
 | Known body of 100+ words, phrase above 3.5% with 3+ uses | Repetition Failed; factual count and percentage |
 | 3-word phrase 4 times in 300 words | Repetition Passed |
-| Configured profile, no keyword | Number with **No focus keyword**, **Add keyword** focuses the field |
+| Either profile, no keyword | Below **Good**, maximum 79; lower limits still apply. **Add a focus keyword**; **Add keyword** focuses the field |
 | Unconfigured Posts, 63 words, server analysis off | Automatic Article number at most 70; default named; optional profile choice; no writes or scan |
 | Unconfigured Pages or custom collection, 63 words | Automatic General number when evidence is complete; schema does not affect the choice |
 | Configured profile | Saved selection overrides the browser default |
@@ -180,10 +191,10 @@ no body images unless stated, and saved Portable Text.
 | Custom blocks with a short paragraph | Body text length Not checked; dash |
 | Template body field | Dash, **Partially checked**; excluded from averages |
 | Too long for phones | Suggestion naming phones and the cut point, marked estimate |
-| Production browser checks | Same number and rows as the server for a default body |
+| Production browser checks | Same rows and policy as the server for a default body; `Intl.Segmenter` word boundaries can vary between browser and server ICU versions |
 | Production browser checks, custom blocks with a short paragraph and no images | Same rows as the server; Image alt text not applicable, Body text length Not checked |
 | Group counts | Header equals the sum of group issues, suggestions, not checked |
-| Analyzer 21 or earlier stored result | **Earlier analyzer**, history kept, no current number or comparison |
+| Analyzer 23 or earlier stored result | **Earlier analyzer**, history kept, no current number or comparison |
 | Sandbox panel | Same groups, pills and band as the editor |
 
 The editor summary contains no weight table or partial point totals. A short

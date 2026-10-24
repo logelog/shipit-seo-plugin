@@ -318,10 +318,10 @@ export {
 /** The variables entry schemas and library templates may use. */
 export { TEMPLATE_VARS as TEMPLATE_VARIABLE_NAMES };
 
-export const SEO_ADMIN_CONTRACT_VERSION = 47 as const;
+export const SEO_ADMIN_CONTRACT_VERSION = 48 as const;
 export const CONTENT_SCORING_RESOURCE_NOTICE_VERSION = 1 as const;
 export const SEO_ENGINE_PLUGIN_ID = "shipit-seo";
-export const SEO_ENGINE_VERSION = "0.4.0-beta.56";
+export const SEO_ENGINE_VERSION = "0.4.0-beta.57";
 export const SEO_ADMIN_API_ROUTES = [
 	"admin-branding",
 	"admin-plugin-coexistence",
@@ -2295,6 +2295,8 @@ export interface SeoAdminEntryPreviewAnalysisSettings {
 }
 
 export interface SeoAdminEntryPreview {
+	/** Saved-body field and explicit template mapping from this installed build. */
+	bodyAnalysis?: import("./content-body-mapping.ts").SeoBodyPlan;
 	contractVersion: typeof SEO_ADMIN_CONTRACT_VERSION;
 	engineVersion: string;
 	generatedAt: string;

@@ -5,10 +5,11 @@ import { SEO_ADMIN_INDEXNOW_STORAGE_VERSION } from "./admin-contract.ts";
 import { defaultIndexNowSettings, type IndexNowInstallation } from "./indexnow.ts";
 import {
 	INDEXNOW_SETTINGS_STORAGE_KEY, buildAdminIndexNowStatus, publicIndexNowKey,
-	deliverIndexNowQueue, enqueueIndexNowUrls, readIndexNowSettings, updateIndexNowSettings,
+	deliverIndexNowQueue, enqueueIndexNowUrls, readIndexNowSettings, readVersionedIndexNowSettings, updateIndexNowSettings,
 } from "./indexnow-runtime.ts";
 import { setupIndexNow } from "./indexnow-setup.ts";
-import { IndexNowSetupError, indexNowVerificationUrl, verifyIndexNowKey } from "./indexnow-verification.ts";
+import { createIndexNowKeyRoute } from "./indexnow-astro.ts";
+import { INDEXNOW_KEY_VERIFICATION_USER_AGENT, IndexNowSetupError, indexNowVerificationUrl, verifyIndexNowKey } from "./indexnow-verification.ts";
 
 function memoryCollection() {
 	const values = new Map<string, any>();
@@ -107,6 +108,7 @@ test("setup generates one key, verifies the public file, then enables delivery w
 	assert.equal(f.requests[0].url, "https://example.com/indexnow-key.txt");
 	assert.equal(f.requests[0].init?.redirect, "manual");
 	assert.equal(f.requests[0].init?.credentials, "omit");
+	assert.equal(new Headers(f.requests[0].init?.headers).get("user-agent"), INDEXNOW_KEY_VERIFICATION_USER_AGENT);
 	assert.equal(new Headers(f.requests[0].init?.headers).has("authorization"), false);
 	assert.equal(new Headers(f.requests[0].init?.headers).has("cookie"), false);
 	assert.equal((await buildAdminIndexNowStatus(f.ctx, await site())).readiness.state, "ready");
@@ -394,4 +396,383 @@ test("a future drain cannot mask an earlier pending URL", async () => {
 	assert.equal(f.scheduled.size, 1);
 	assert.ok(Date.parse([...f.scheduled.values()][0].nextRunAt) < Date.parse(lateTask.nextRunAt));
 	assert.equal((await buildAdminIndexNowStatus(f.ctx, await site())).readiness.state, "ready");
+});
+
+
+const siteOwnedInstallation: IndexNowInstallation = {
+	mode: "astro", siteUrl: "https://example.com", siteOrigin: "https://example.com",
+	siteIssue: null, keyRoute: "existing",
+};
+const siteOwnedKey = "site-owned-key-123";
+
+function siteOwnedFixture(initial?: Record<string, unknown>) {
+	const f = fixture(initial);
+	f.ctx.http!.fetch = async (url: string, init?: RequestInit) => {
+		f.requests.push({ url, init });
+		return new Response(siteOwnedKey, { headers: { "content-type": "text/plain; charset=utf-8" } });
+	};
+	return f;
+}
+
+test("first setup reuses a valid site-owned default file after seeding a disabled key", async () => {
+	const f = siteOwnedFixture({
+		batchSize: 17, maxAttempts: 3, minIntervalSeconds: 301,
+		autoSubmit: true, autoSubmitContentTypes: ["guides"],
+	});
+	const result = await setupIndexNow(f.ctx, (await readIndexNowSettings(f.ctx)).updatedAt, site, {
+		installation: siteOwnedInstallation,
+	});
+	assert.equal(result.values.apiKey, siteOwnedKey);
+	assert.equal(result.values.enabled, true);
+	assert.equal(result.values.autoSubmit, false);
+	assert.equal(result.values.batchSize, 17);
+	assert.equal(result.values.maxAttempts, 3);
+	assert.equal(result.values.minIntervalSeconds, 301);
+	assert.deepEqual(result.values.autoSubmitContentTypes, ["guides"]);
+	assert.equal(f.writes.length, 2);
+	assert.equal((f.writes[0] as any).values.enabled, false);
+	assert.match((f.writes[0] as any).values.apiKey, /^[a-f0-9]{32}$/);
+	assert.equal((f.writes[0] as any).verification, undefined);
+	assert.equal((f.writes[1] as any).verification.apiKey, siteOwnedKey);
+	assert.equal((f.writes[1] as any).values.apiKey, siteOwnedKey);
+	assert.equal((f.writes[1] as any).values.enabled, true);
+	assert.equal(f.requests.length, 1, "the checked file is not fetched twice");
+	assert.equal(f.requests[0].url, "https://example.com/indexnow-key.txt");
+	assert.equal(f.requests[0].init?.method, "GET");
+	assert.equal(f.requests[0].init?.redirect, "manual");
+	assert.equal(f.requests[0].init?.credentials, "omit");
+	const headers = new Headers(f.requests[0].init?.headers);
+	assert.equal(headers.get("user-agent"), INDEXNOW_KEY_VERIFICATION_USER_AGENT);
+	assert.equal(headers.get("accept"), "text/plain");
+	assert.equal(headers.has("cookie"), false);
+	assert.equal(headers.has("authorization"), false);
+	assert.equal(f.jobs.values.size, 0);
+	assert.equal(f.scheduled.size, 0);
+	const second = await setupIndexNow(f.ctx, result.updatedAt, site, { installation: siteOwnedInstallation });
+	assert.equal(second.values.apiKey, siteOwnedKey);
+	assert.equal(f.requests.length, 2, "a repeated setup verifies the same saved key once");
+	assert.equal(f.writes.length, 3);
+});
+
+test("a plugin-backed existing route can read the seeded key during first setup", async () => {
+	const f = fixture();
+	const keyRoute = createIndexNowKeyRoute();
+	const serve = async (url: string, init?: RequestInit) => keyRoute({
+		request: new Request(url, init), url: new URL(url),
+		cache: { set: (value: boolean) => assert.equal(value, false) },
+		locals: { emdash: { handlePublicPluginApiRoute: async () => ({
+			success: true, data: await publicIndexNowKey(f.ctx),
+		}) } },
+	} as never);
+	assert.equal((await serve("https://example.com/indexnow-key.txt")).status, 404);
+	f.ctx.http!.fetch = async (url, init) => {
+		f.requests.push({ url, init });
+		return serve(url, init);
+	};
+	const saved = await setupIndexNow(f.ctx, null, site, { installation: siteOwnedInstallation });
+	assert.match(saved.values.apiKey, /^[a-f0-9]{32}$/);
+	assert.equal(saved.values.enabled, true);
+	assert.equal(saved.values.autoSubmit, false);
+	assert.equal(f.writes.length, 2);
+	assert.equal(f.requests.length, 1);
+	assert.equal((f.writes[0] as any).values.apiKey, saved.values.apiKey);
+	assert.equal((f.writes[0] as any).values.enabled, false);
+	assert.equal((f.writes[1] as any).verification.apiKey, saved.values.apiKey);
+});
+
+test("a missing or invalid site-owned file retains a disabled pending key", async () => {
+	const cases = [
+		() => new Response("blocked", { status: 403 }),
+		() => new Response("not found", { status: 404 }),
+		() => new Response(null, { status: 302, headers: { location: "/elsewhere.txt" } }),
+		() => new Response(siteOwnedKey, { headers: { "content-type": "text/html" } }),
+		() => new Response("not a valid key", { headers: { "content-type": "text/plain" } }),
+		() => new Response("a".repeat(257), { headers: { "content-type": "text/plain" } }),
+		() => new Response(new Uint8Array([255]), { headers: { "content-type": "text/plain" } }),
+	];
+	for (const response of cases) {
+		const f = siteOwnedFixture();
+		f.ctx.http!.fetch = async (url, init) => { f.requests.push({ url, init }); return response(); };
+		await assert.rejects(setupIndexNow(f.ctx, null, site, { installation: siteOwnedInstallation }), IndexNowSetupError);
+		assert.equal(f.writes.length, 1);
+		assert.equal(f.requests.length, 1);
+		const current = await readIndexNowSettings(f.ctx);
+		assert.equal(current.values.enabled, false);
+		assert.equal(current.values.autoSubmit, false);
+		assert.match(current.values.apiKey, /^[a-f0-9]{32}$/);
+		assert.equal((f.writes[0] as any).verification, undefined);
+	}
+});
+
+test("site-owned file adoption never replaces a saved unverified or previously activated key", async () => {
+	for (const [initial, verification] of [
+		[{ apiKey: "manual-or-pending-key", batchSize: 21 }, undefined],
+		[{ apiKey: "activated-site-key", enabled: true, autoSubmit: true }, undefined],
+		[{ apiKey: "verified-site-key", enabled: false, autoSubmit: true }, {
+			siteOrigin: "https://example.com", keyLocation: "/indexnow-key.txt",
+			apiKey: "verified-site-key", checkedAt: "2026-09-01T00:00:00.000Z",
+		}],
+	] as const) {
+		const f = fixture({ ...initial }, verification ? { ...verification } : undefined);
+		f.ctx.http!.fetch = async () => new Response(siteOwnedKey, { headers: { "content-type": "text/plain" } });
+		const before = await readIndexNowSettings(f.ctx);
+		await assert.rejects(setupIndexNow(f.ctx, before.updatedAt, site, { installation: siteOwnedInstallation }), /current key/);
+		assert.equal(f.writes.length, 0);
+		assert.deepEqual(await readIndexNowSettings(f.ctx), before);
+	}
+});
+
+test("custom verification locations do not opt into adopting a site-owned key", async () => {
+	for (const keyLocation of ["/custom-key.txt", "https://example.com/indexnow-key.txt"]) {
+		const f = siteOwnedFixture({ keyLocation });
+		await assert.rejects(setupIndexNow(f.ctx, (await readIndexNowSettings(f.ctx)).updatedAt, site, {
+			installation: siteOwnedInstallation,
+		}), /current key/);
+		const current = await readIndexNowSettings(f.ctx);
+		assert.equal(current.values.enabled, false);
+		assert.equal(current.values.keyLocation, keyLocation);
+		assert.notEqual(current.values.apiKey, siteOwnedKey);
+		assert.match(current.values.apiKey, /^[a-f0-9]{32}$/);
+	}
+});
+
+test("settings and site changes during site-owned verification cannot be overwritten", async () => {
+	const f = siteOwnedFixture({ batchSize: 7 });
+	const transport = f.ctx.http!.fetch;
+	f.ctx.http!.fetch = async (...args) => {
+		const response = await transport(...args);
+		const current = await f.kv.getVersioned(INDEXNOW_SETTINGS_STORAGE_KEY);
+		assert.ok(current);
+		await f.kv.compareAndSet(INDEXNOW_SETTINGS_STORAGE_KEY, current.revision, {
+			...(current.value as Record<string, unknown>),
+			values: { ...(current.value as any).values, batchSize: 19 },
+		});
+		return response;
+	};
+	await assert.rejects(setupIndexNow(f.ctx, (await readIndexNowSettings(f.ctx)).updatedAt, site, {
+		installation: siteOwnedInstallation,
+	}), /settings changed/);
+	const current = await readIndexNowSettings(f.ctx);
+	assert.equal(current.values.batchSize, 19);
+	assert.match(current.values.apiKey, /^[a-f0-9]{32}$/);
+	assert.notEqual(current.values.apiKey, siteOwnedKey);
+	assert.equal(current.values.enabled, false);
+	const moved = siteOwnedFixture();
+	let reads = 0;
+	await assert.rejects(setupIndexNow(moved.ctx, null,
+		async () => ++reads === 1 ? await site() : "https://other.example.com",
+		{ installation: siteOwnedInstallation }), /address changed/);
+	assert.equal(moved.writes.length, 1);
+	assert.equal((await readIndexNowSettings(moved.ctx)).values.enabled, false);
+});
+
+test("a lost lease cannot commit an adopted site-owned key", async () => {
+	const f = siteOwnedFixture();
+	const transport = f.ctx.http!.fetch;
+	f.ctx.http!.fetch = async (...args) => {
+		const response = await transport(...args);
+		f.leases.values.clear();
+		return response;
+	};
+	await assert.rejects(setupIndexNow(f.ctx, null, site, { installation: siteOwnedInstallation }), /ownership/);
+	assert.equal(f.writes.length, 1);
+	const current = await readIndexNowSettings(f.ctx);
+	assert.equal(current.values.enabled, false);
+	assert.match(current.values.apiKey, /^[a-f0-9]{32}$/);
+	assert.notEqual(current.values.apiKey, siteOwnedKey);
+});
+
+test("a lost final write acknowledgement keeps the adopted key atomic on retry", async () => {
+	const f = siteOwnedFixture();
+	const compareAndSet = f.ctx.kv.compareAndSet!;
+	let loseAcknowledgement = true;
+	f.ctx.kv.compareAndSet = async (...args) => {
+		const result = await compareAndSet(...args);
+		if (result.applied && (args[2] as any).values.enabled && loseAcknowledgement) {
+			loseAcknowledgement = false;
+			throw new Error("lost write acknowledgement");
+		}
+		return result;
+	};
+	await assert.rejects(setupIndexNow(f.ctx, null, site, { installation: siteOwnedInstallation }), /lost write acknowledgement/);
+	const saved = await readIndexNowSettings(f.ctx);
+	assert.equal(saved.values.apiKey, siteOwnedKey);
+	assert.equal(saved.values.enabled, true);
+	assert.equal(f.writes.length, 2);
+	assert.equal((f.writes[1] as any).verification.apiKey, siteOwnedKey);
+	await assert.rejects(setupIndexNow(f.ctx, null, site, { installation: siteOwnedInstallation }), /settings changed/);
+	assert.equal(f.requests.length, 1, "an outdated retry cannot issue another request");
+	const result = await setupIndexNow(f.ctx, saved.updatedAt, site, { installation: siteOwnedInstallation });
+	assert.equal(result.values.apiKey, siteOwnedKey);
+	assert.equal(f.requests.length, 2);
+	assert.equal(f.writes.length, 3);
+	assert.equal(f.jobs.values.size, 0);
+});
+
+test("a lost pending write acknowledgement can resume a plugin-backed existing route", async () => {
+	const f = fixture();
+	const compareAndSet = f.ctx.kv.compareAndSet!;
+	let loseAcknowledgement = true;
+	f.ctx.kv.compareAndSet = async (...args) => {
+		const result = await compareAndSet(...args);
+		if (result.applied && loseAcknowledgement) {
+			loseAcknowledgement = false;
+			throw new Error("lost pending acknowledgement");
+		}
+		return result;
+	};
+	await assert.rejects(setupIndexNow(f.ctx, null, site, { installation: siteOwnedInstallation }), /lost pending acknowledgement/);
+	const pending = await readIndexNowSettings(f.ctx);
+	assert.equal(pending.values.enabled, false);
+	assert.match(pending.values.apiKey, /^[a-f0-9]{32}$/);
+	assert.equal(f.requests.length, 0);
+	await assert.rejects(setupIndexNow(f.ctx, null, site, { installation: siteOwnedInstallation }), /settings changed/);
+	const saved = await setupIndexNow(f.ctx, pending.updatedAt, site, { installation: siteOwnedInstallation });
+	assert.equal(saved.values.apiKey, pending.values.apiKey);
+	assert.equal(saved.values.enabled, true);
+	assert.equal(saved.values.autoSubmit, false);
+	assert.equal(f.requests.length, 1);
+	assert.equal(f.writes.length, 2);
+});
+
+test("verification reports safe status-specific errors without response contents or keys", async () => {
+	const settings = { ...defaultIndexNowSettings(), apiKey: "existing-key-123" };
+	const changedUrlError = () => {
+		const response = new Response("private-output-marker", { status: 403 });
+		Object.defineProperty(response, "url", { value: "https://other.example/private-output-marker" });
+		return response;
+	};
+	for (const [makeResponse, expected] of [
+		[changedUrlError, /HTTP 403/],
+		[() => new Response("private-output-marker", { status: 403 }), /HTTP 403/],
+		[() => new Response("private-output-marker", { status: 404 }), /HTTP 404/],
+		[() => new Response("private-output-marker", { status: 503 }), /HTTP 503/],
+		[() => new Response(null, { status: 302, headers: { location: "https://other.example/private-output-marker" } }), /redirects/],
+		[() => new Response("private-output-marker", { headers: { "content-type": "text/html" } }), /plain text/],
+		[() => new Response("a".repeat(257), { headers: { "content-type": "text/plain" } }), /256 bytes/],
+		[() => new Response(new Uint8Array([255]), { headers: { "content-type": "text/plain" } }), /UTF-8/],
+		[() => new Response("multiple invalid words", { headers: { "content-type": "text/plain" } }), /one valid IndexNow key/],
+		[() => new Response("different-key-123", { headers: { "content-type": "text/plain" } }), /current key/],
+	] as const) {
+		const f = fixture();
+		f.ctx.http!.fetch = async () => makeResponse();
+		await assert.rejects(verifyIndexNowKey(f.ctx, settings, await site()), (error: unknown) => {
+			assert.ok(error instanceof IndexNowSetupError);
+			assert.equal(error.step, "verify");
+			assert.match(error.message, expected);
+			assert.equal(error.message.includes("private-output-marker"), false);
+			assert.equal(error.message.includes(settings.apiKey), false);
+			assert.equal(error.message.includes("different-key-123"), false);
+			return true;
+		});
+	}
+});
+
+
+test("site-owned key adoption resumes after 403, 404 and timeout without losing setup intent", async () => {
+	for (const failure of ["403", "404", "timeout"] as const) {
+		const f = siteOwnedFixture();
+		const transport = f.ctx.http!.fetch;
+		f.ctx.http!.fetch = async (url, init) => {
+			f.requests.push({ url, init });
+			if (failure === "timeout") return new Promise<Response>(() => {});
+			return new Response("unavailable", { status: Number(failure) });
+		};
+		await assert.rejects(setupIndexNow(f.ctx, null, site, { installation: siteOwnedInstallation }),
+			failure === "timeout" ? /timed out/ : new RegExp("HTTP " + failure));
+		const pending = await readIndexNowSettings(f.ctx);
+		const internal = await readVersionedIndexNowSettings(f.ctx);
+		assert.equal(pending.values.enabled, false);
+		assert.equal("pendingSetup" in pending, false, "internal intent is not returned through public settings");
+		assert.deepEqual(internal.settings?.pendingSetup, {
+			siteOrigin: "https://example.com", apiKey: pending.values.apiKey, keyLocation: "/indexnow-key.txt",
+		});
+		f.ctx.http!.fetch = transport;
+		const saved = await setupIndexNow(f.ctx, pending.updatedAt, site, { installation: siteOwnedInstallation });
+		assert.equal(saved.values.apiKey, siteOwnedKey);
+		assert.equal(saved.values.enabled, true);
+		assert.equal(saved.values.autoSubmit, false);
+		assert.equal((await readVersionedIndexNowSettings(f.ctx)).settings?.pendingSetup, undefined);
+		assert.equal(f.requests.length, 2);
+		assert.equal(f.writes.length, 2);
+	}
+});
+
+test("lost pending acknowledgement still allows a generated key to adopt the existing static file", async () => {
+	const f = siteOwnedFixture();
+	const compareAndSet = f.ctx.kv.compareAndSet!;
+	let loseAcknowledgement = true;
+	f.ctx.kv.compareAndSet = async (...args) => {
+		const result = await compareAndSet(...args);
+		if (result.applied && loseAcknowledgement) {
+			loseAcknowledgement = false;
+			throw new Error("lost pending acknowledgement");
+		}
+		return result;
+	};
+	await assert.rejects(setupIndexNow(f.ctx, null, site, { installation: siteOwnedInstallation }), /lost pending acknowledgement/);
+	const pending = await readIndexNowSettings(f.ctx);
+	assert.ok((await readVersionedIndexNowSettings(f.ctx)).settings?.pendingSetup);
+	assert.equal(f.requests.length, 0);
+	const saved = await setupIndexNow(f.ctx, pending.updatedAt, site, { installation: siteOwnedInstallation });
+	assert.equal(saved.values.apiKey, siteOwnedKey);
+	assert.notEqual(saved.values.apiKey, pending.values.apiKey);
+	assert.equal(saved.values.enabled, true);
+	assert.equal(f.requests.length, 1);
+	assert.equal((await readVersionedIndexNowSettings(f.ctx)).settings?.pendingSetup, undefined);
+});
+
+test("manual settings saves and generated-key changes clear automatic adoption intent", async () => {
+	for (const newKey of [null, "manually-generated-key"] as const) {
+		const f = siteOwnedFixture();
+		const transport = f.ctx.http!.fetch;
+		f.ctx.http!.fetch = async () => new Response(null, { status: 403 });
+		await assert.rejects(setupIndexNow(f.ctx, null, site, { installation: siteOwnedInstallation }), /HTTP 403/);
+		assert.ok((await readVersionedIndexNowSettings(f.ctx)).settings?.pendingSetup);
+		const changed = await updateIndexNowSettings(f.ctx, (current) => ({
+			...current.values, apiKey: newKey ?? current.values.apiKey,
+		}));
+		assert.equal(changed.updated, true);
+		const current = await readIndexNowSettings(f.ctx);
+		assert.equal((await readVersionedIndexNowSettings(f.ctx)).settings?.pendingSetup, undefined);
+		f.ctx.http!.fetch = transport;
+		await assert.rejects(setupIndexNow(f.ctx, current.updatedAt, site, { installation: siteOwnedInstallation }), /current key/);
+		assert.equal((await readIndexNowSettings(f.ctx)).values.apiKey, current.values.apiKey);
+	}
+});
+
+test("pending setup provenance is rejected when disabled state or key bindings do not match", async () => {
+	const edits = [
+		(value: any) => { value.pendingSetup.apiKey = "different-pending-key"; },
+		(value: any) => { value.pendingSetup.keyLocation = "/different.txt"; },
+		(value: any) => { value.pendingSetup.siteOrigin = "http://127.0.0.1"; },
+		(value: any) => { value.pendingSetup.siteOrigin = "https://example.com/path"; },
+		(value: any) => { value.pendingSetup.extra = true; },
+		(value: any) => { value.values.keyLocation = "/different.txt"; },
+		(value: any) => { value.values.enabled = true; },
+		(value: any) => { value.verification = {
+			siteOrigin: "https://example.com", apiKey: value.values.apiKey,
+			keyLocation: "/indexnow-key.txt", checkedAt: new Date().toISOString(),
+		}; },
+	];
+	for (const edit of edits) {
+		const f = siteOwnedFixture();
+		f.ctx.http!.fetch = async () => new Response(null, { status: 403 });
+		await assert.rejects(setupIndexNow(f.ctx, null, site, { installation: siteOwnedInstallation }), /HTTP 403/);
+		const raw = await f.kv.getVersioned(INDEXNOW_SETTINGS_STORAGE_KEY);
+		assert.ok(raw);
+		edit(raw.value);
+		await f.kv.compareAndSet(INDEXNOW_SETTINGS_STORAGE_KEY, raw.revision, raw.value);
+		assert.equal((await readVersionedIndexNowSettings(f.ctx)).settings?.pendingSetup, undefined);
+	}
+	const moved = siteOwnedFixture();
+	const transport = moved.ctx.http!.fetch;
+	moved.ctx.http!.fetch = async () => new Response(null, { status: 403 });
+	await assert.rejects(setupIndexNow(moved.ctx, null, site, { installation: siteOwnedInstallation }), /HTTP 403/);
+	const pending = await readIndexNowSettings(moved.ctx);
+	moved.ctx.http!.fetch = transport;
+	await assert.rejects(setupIndexNow(moved.ctx, pending.updatedAt, async () => "https://other.example.com", {
+		installation: { ...siteOwnedInstallation, siteUrl: "https://other.example.com", siteOrigin: "https://other.example.com" },
+	}), /current key/);
+	assert.equal((await readIndexNowSettings(moved.ctx)).values.apiKey, pending.values.apiKey);
 });

@@ -62,6 +62,14 @@ keyword input. They do not run manual server analysis or store history.
 Saved assessment profiles override the browser defaults; Posts use Article
 checks by default, while Pages and custom types use General content.
 
+Custom blocks use explicit, versioned field mappings from the site's Astro
+configuration. The shared projector reads declared saved prose, headings,
+links and images; it does not recursively collect arbitrary strings. The
+entry preview carries the selected mapping to the browser, protected by the
+same entry, saved-version, ownership and locale checks. Captured server inputs
+retain the mapping across replay and include it in freshness identities.
+Unknown mapped content keeps dependent checks incomplete.
+
 Manual analysis is an explicit privileged operation. Automatic analysis,
 history and bulk scans require activation and resource-use acknowledgement;
 a scan additionally needs Start. Upgrades do not start catch-up analysis.

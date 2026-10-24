@@ -1,3 +1,4 @@
+import { bindContentAnalysis, checkContentAnalysisOptions } from "../content-body-mapping.ts";
 import assert from "node:assert/strict";
 import {
 	SEO_ADMIN_ANALYSIS_PROFILE_STORAGE_VERSION,
@@ -12,7 +13,7 @@ import { aggregateSeoChecks, analyzeSeoContent, seoContentCheckProblem, seoScore
 import { presentSeoChecks } from "../check-presentation.ts";
 import { extractSeoDocumentText } from "../document-signals.ts";
 import { contentBodyValue, contentImageInputs, featuredImageFromContentData, keywordFromContent } from "../content-analysis-inputs.ts";
-import seoRuntime from "../sandbox-entry.ts";
+import seoRuntime, { createSeoEngine } from "../sandbox-entry.ts";
 import { completeContentItemAnalysis, prepareContentItemAnalysis } from "../entry-analysis-runtime.ts";
 import { GLOBAL_SETTINGS_KEY } from "../settings-runtime.ts";
 import { defaultSettingsValues } from "../settings-state.ts";
@@ -487,6 +488,59 @@ assert.equal(resolveEditorBasicAnalysis({ ...partialInput, sourceVersion: "anoth
 
 	// A short default body with an unread custom block and no images: the browser rows are the server's,
 	// so Image alt text is not applicable on both and only the word count is Not checked.
+
+ const mappedItem = { ...runtimeItem, data: { ...runtimeItem.data, content: [
+  { _type: "article_section", _version: 1, heading: "A saved custom article", body: runtimeItem.data.content, internalNote: "Never count this private field" },
+ ] } } as unknown as typeof runtimeItem;
+ const mapping = checkContentAnalysisOptions({ mappings: [{ collection: "posts", bodyField: "content", blocks: [
+  { type: "article_section", version: 1, fields: [ { kind: "heading", path: ["heading"], level: 2 }, { kind: "richText", path: ["body"] } ] },
+ ] }] })!;
+ bindContentAnalysis(runtimeContext, mapping);
+ const mapped = await runtimeAnalyses(mappedItem, keywords);
+ assert.equal(mapped.prepared.input.bodyIncomplete, false);
+ assert.ok(mapped.prepared.input.body.includes("A saved custom article"));
+ assert.ok(!mapped.prepared.input.body.includes("Never count"));
+ assert.deepEqual(mapped.runtimeBrowser.result.checks, mapped.runtimeServer.checks, "mapped body rows agree across the real preview and server preparation");
+ assert.deepEqual(mapped.runtimeBrowser.result.metrics, mapped.runtimeServer.metrics);
+ assert.notEqual(seoScoreDisplay(mapped.runtimeBrowser.result).score, null, "known custom body produces a numeric badge");
+ assert.notEqual(mapped.prepared.configurationFingerprint, prepared.configurationFingerprint, "mapping changes invalidate prior stored inputs");
+ // Basic mapped checks need neither activation nor persistent work on entry open.
+ kv.set(GLOBAL_SETTINGS_KEY, { ...(kv.get(GLOBAL_SETTINGS_KEY) as object), contentScoringEnabled: false });
+ analysed = mappedItem;
+ const mappedRef = "posts:" + mappedItem.id;
+ const mappedSnapshot = createSavedContentSnapshot(mappedRef, mappedItem);
+ const stateBeforeOpen = JSON.stringify([[...kv], [...stores].map(([name, values]) => [name, [...values]])]);
+ const mappedEngine = createSeoEngine(undefined, { contentAnalysis: mapping });
+ const openResult = parseSeoAdminEntryPreviewResult(await (mappedEngine as any).routes["admin-entry-preview"].handler(
+  { input: { ref: mappedRef, entryOnly: true, snapshot: mappedSnapshot } }, runtimeContext));
+ assert.equal(JSON.stringify([[...kv], [...stores].map(([name, values]) => [name, [...values]])]), stateBeforeOpen, "opening the mapped entry does not write settings, scores or history");
+ assert.equal(openResult.success, true);
+ if (!openResult.success) throw new Error("Expected mapped entry preview with optional analysis off");
+ const openAnalysis = resolveEditorBasicAnalysis({ ...input, preview: openResult.preview, snapshot: mappedSnapshot, ref: mappedRef,
+  sourceVersion: mappedSnapshot.sourceVersion, keywords, publicationStatus: mappedItem.status,
+  assessment: { state: "configured", collection: "posts", profile: "article", version: 1, revision: "selected-profile" } });
+ assert.equal(openAnalysis.state, "ready");
+ assert.notEqual(openAnalysis.state === "ready" ? seoScoreDisplay(openAnalysis.result).score : null, null, "optional server analysis off does not suppress the local score");
+ const mismatched = resolveEditorBasicAnalysis({ ...input, preview: mapped.previewResult.preview });
+ assert.equal(mismatched.state, "unavailable", "a valid mapped body cannot bypass the entry/version guard");
+ const unknownMappedItem = structuredClone(mappedItem);
+ (unknownMappedItem.data.content[0] as any)._version = 2;
+ const unknownMapped = await runtimeAnalyses(unknownMappedItem, keywords);
+ assert.equal(unknownMapped.prepared.input.bodyIncomplete, true);
+ assert.equal(seoScoreDisplay(unknownMapped.runtimeBrowser.result).score, null, "an unmapped version is never silently complete");
+ assert.deepEqual(unknownMapped.runtimeBrowser.result.checks, unknownMapped.runtimeServer.checks);
+ const partlyMappedItem = structuredClone(mappedItem);
+ partlyMappedItem.data.content.push({ _type: "unread_embed", text: "Do not guess this is rendered prose" } as any);
+ const partlyMapped = await runtimeAnalyses(partlyMappedItem, ["sourdough bread", "starter care", "phrase absent from the observed text"]);
+ assert.equal(partlyMapped.prepared.input.bodyIncomplete, true);
+ assert.ok(partlyMapped.runtimeBrowser.result.metrics.wordCount > 300, "a substantial observed body still cannot hide unread content");
+ assert.equal(seoScoreDisplay(partlyMapped.runtimeBrowser.result).score, null);
+ assert.equal(partlyMapped.runtimeBrowser.result.checks.find(c => c.id === "image-alt-text")?.basis, "unavailable", "readable image alt cannot prove all unknown body images");
+ assert.equal(partlyMapped.runtimeBrowser.result.checks.find(c => c.id === "secondary-keyword-coverage")?.basis, "unavailable", "unread text cannot prove secondary phrases missing");
+ assert.deepEqual(partlyMapped.runtimeBrowser.result.checks, partlyMapped.runtimeServer.checks);
+ // Restore the normal path for retained custom-block compatibility controls.
+ bindContentAnalysis(runtimeContext, { mappings: [] });
+
 	const blockKeywords = ["sourdough starter", "warm kitchen"];
 	const custom = await runtimeAnalyses(customBlockItem, blockKeywords);
 	const row = (checks: readonly { id: string; basis: string }[], id: string) => checks.find((item) => item.id === id)?.basis;

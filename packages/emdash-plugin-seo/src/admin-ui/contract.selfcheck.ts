@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { analyzeSeoContent, seoAnalysisPresentation, summarizeSeoChecks, type SeoAnalysisInput } from "../analysis.ts";
+import { analyzeSeoContent, seoAnalysisPresentation, seoScoreBand, summarizeSeoChecks, type SeoAnalysisInput } from "../analysis.ts";
 import { buildScoreTrends, createScoreSnapshot } from "../score-history.ts";
 import "./score-contract.selfcheck.ts";
 import { composeSeoSchema, defaultSeoSchemaComposerInput } from "../schema-composer.ts";
@@ -121,10 +121,11 @@ const scoreAnalysisInput: SeoAnalysisInput = {
 	sourceUpdatedAt: "2026-07-14T09:00:00.000Z",
 };
 const currentScoreAssessment = analyzeSeoContent(scoreAnalysisInput);
+const keywordlessScoreAssessment = analyzeSeoContent({ ...scoreAnalysisInput, focusKeywords: [] });
 const currentScorePresentation = seoAnalysisPresentation(currentScoreAssessment);
 const currentCheckSummary = summarizeSeoChecks(currentScoreAssessment.checks);
-// Needs attention counts Failed and Partly met rows only.
-const currentNeedsAttention = currentCheckSummary.issues > 0;
+// Needs attention counts Failed and Partly met rows and a score below Good.
+const currentNeedsAttention = currentCheckSummary.issues > 0 || seoScoreBand(currentScoreAssessment.score) !== "good";
 
 const fixture = {
 	contractVersion: SEO_ADMIN_CONTRACT_VERSION,
@@ -613,9 +614,21 @@ assert.throws(
 assert.deepEqual(
 	parseSeoAdminContentScores({
 		...contentScoreFixture,
-		items: [{ ...contentScoreFixture.items[0], keyword: undefined, keywords: [] }],
+		items: [{
+			...contentScoreFixture.items[0], ...keywordlessScoreAssessment,
+			keyword: undefined, keywords: [], profileKeywords: [], focusKeywordSource: "none" as const,
+		}],
 	}).items[0]?.keywords,
 	[],
+);
+// The focus-keyword row still names the keyword these fields no longer carry.
+assert.throws(
+	() =>
+		parseSeoAdminContentScores({
+		...contentScoreFixture,
+		items: [{ ...contentScoreFixture.items[0], keyword: undefined, keywords: [] }],
+	}),
+	/contentScores.items/,
 );
 assert.throws(
 	() =>
@@ -732,6 +745,7 @@ assert.deepEqual(
 		items: [
 			{
 			...contentScoreFixture.items[0],
+			...keywordlessScoreAssessment,
 			keyword: undefined,
 			keywords: [],
 			profileKeywords: [],

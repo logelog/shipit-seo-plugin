@@ -3,6 +3,7 @@ import {
 	deleteSchemaConditional, validSchemaWriteRevision, type SchemaVersionedValue,
 } from "./schema-write-storage.ts";
 import { compareStoredValue, supportsConditionalStorage } from "./conditional-storage.ts";
+import { bindContentAnalysis, checkContentAnalysisOptions, contentBodyPlan, type SeoContentAnalysisOptions } from "./content-body-mapping.ts";
 import { z } from "astro/zod";
 import { projectCoexistenceRobots } from "./plugin-coexistence.ts";
 import { bindCoexistenceHost, readCoexistenceInventory, coexistenceAdmission, type CoexistenceHost } from "./plugin-coexistence-runtime.ts";
@@ -45,6 +46,7 @@ import {
 	classifySeoContentCheck,
 	summarizeSeoChecks,
 	seoAnalysisPresentation,
+	seoScoreBand,
 	seoScoreDisplay,
 	type SeoAdminConfiguration,
 	type SeoAdminContentScore,
@@ -5861,11 +5863,13 @@ export function createSeoEngine(
 		internalLinks?: LinkCommandHost;
 		coexistence?: CoexistenceHost;
 		branding?: SeoInstalledBranding;
+		contentAnalysis?: SeoContentAnalysisOptions;
 	} = {},
 ): typeof plugin {
-	if (installation.mode === "unknown" && !options.sitemap && !options.robots && !options.llmsTxt && !options.scoreScan && !options.internalLinks && !options.coexistence && !options.branding) {
+	if (installation.mode === "unknown" && !options.sitemap && !options.robots && !options.llmsTxt && !options.scoreScan && !options.internalLinks && !options.coexistence && !options.branding && !options.contentAnalysis) {
 		return plugin;
 	}
+	const contentAnalysis = checkContentAnalysisOptions(options.contentAnalysis);
 	const bind = (handler: (...args: any[]) => any) => (first: unknown, ctx: unknown, ...rest: unknown[]) => {
 		if (ctx && typeof ctx === "object") {
 			if (installation.mode !== "unknown") indexNowInstallations.set(ctx, installation);
@@ -5875,6 +5879,7 @@ export function createSeoEngine(
 			if (options.scoreScan) scoreScanHosts.set(ctx, options.scoreScan);
 			if (options.coexistence) bindCoexistenceHost(ctx, options.coexistence);
 			if (options.branding) brandingHosts.set(ctx, options.branding);
+			if (contentAnalysis) bindContentAnalysis(ctx, contentAnalysis);
 		}
 		return handler(first, ctx, ...rest);
 	};
@@ -9438,6 +9443,7 @@ async function buildAdminEntryPreview(
 			image: effective.image.source,
 		},
 		outputSupport: SEO_ADMIN_OUTPUT_SUPPORT,
+		bodyAnalysis: contentBodyPlan(ctx, parsed.collection, String(item?.slug ?? item?.data?.slug ?? ""), collectionDefinition?.portableTextBodyField ?? null),
 		ownership: resolveEntryOwnership({
 			hostItem,
 			resolvedItem: item,
@@ -9907,14 +9913,19 @@ function averageScore(items: SeoScoreRecord[]): number | null {
 	return Math.round(total / items.length);
 }
 
-/** Suggestions never count; only Failed and Partly met rows need attention. */
-function scoreNeedsAttention(item: Pick<SeoScoreRecord, "checks">): boolean {
-	return summarizeSeoChecks(item.checks).issues > 0;
+/** The unweighted row that holds a score below Good until a focus keyword is added. */
+function unsetFocusKeyword(item: Pick<SeoScoreRecord, "checks">): SeoContentCheck | undefined {
+	return item.checks.find((check) => check.id === "focus-keyword" && check.basis === "measured" && check.evidence.actual === null);
+}
+
+/** Suggestions never count; Failed and Partly met rows and a score below Good need attention. */
+function scoreNeedsAttention(item: Pick<SeoScoreRecord, "checks" | "score">): boolean {
+	return summarizeSeoChecks(item.checks).issues > 0 || seoScoreBand(item.score) !== "good";
 }
 
 function firstScoreIssue(item: SeoScoreRecord): string {
 	if (item.scoreVersion !== SEO_SCORE_VERSION) return SEO_EARLIER_ANALYZER_TEXT;
-	const issue = item.checks.find((check) => classifySeoContentCheck(check).issue) ??
+	const issue = item.checks.find((check) => classifySeoContentCheck(check).issue) ?? unsetFocusKeyword(item) ??
 		item.checks.find((check) => classifySeoContentCheck(check).role === "advisory" && check.status !== "pass");
 	return issue ? `${issue.label}: ${issue.detail}` : seoAnalysisPresentation(item).label;
 }

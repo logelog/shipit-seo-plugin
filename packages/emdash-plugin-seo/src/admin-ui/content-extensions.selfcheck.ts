@@ -2748,14 +2748,14 @@ if (tinyAnalysis.state !== "ready") throw new Error("The saved tiny-entry contro
 assert.equal(tinyAnalysis.result.metrics.wordCount, 2);
 assert.equal(tinyAnalysis.result.calculation.earnedWeight, 48.75);
 assert.equal(tinyAnalysis.result.calculation.totalWeight, 52);
-assert.equal(tinyAnalysis.result.score, 94, "the raw applicable-check arithmetic stays separate from assessment readiness");
+assert.deepEqual([tinyAnalysis.result.calculation.rawScore, tinyAnalysis.result.score], [94, 79], "the raw applicable-check arithmetic stays separate from assessment readiness");
 const tinySummary = seoAnalysisSummary(tinyAnalysis.result);
 assert.equal(tinySummary.numericBadgeAvailable, false);
 assert.ok(tinySummary.advisorySuggestions >= 2);
 const tinyHtml = renderWorkflow(workflowProduction.SeoAnalysisDisclosure, { ...workflowProps, preview: tinyPreview,
  score: null, basicAnalysis: tinyAnalysis, keywordsValue: [], renderLocalAnalysis: passChecklist,
 });
-assert.doesNotMatch(tinyHtml, /shipit-seo-native-panel__ring-progress|<span aria-hidden="true">94<\/span>|out of 100|94\/100/);
+assert.doesNotMatch(tinyHtml, /shipit-seo-native-panel__ring-progress|<span aria-hidden="true">(?:94|79)<\/span>|out of 100|(?:94|79)\/100/);
 assert.match(tinyHtml, /<strong>Too little text to score<\/strong>/);
 const tinyTotals = contentCheckPresentation(tinyAnalysis.result).totals;
 assert.ok(tinyTotals.suggestions >= 2);
@@ -3643,7 +3643,8 @@ const completeManualAnalysis = analyzeSeoContent({ ...actionInput,
 	});
 const completeManualScore = { ...completeManualAnalysis, freshness: "current" as const } as Parameters<typeof analysisPresentation>[0];
 assert.equal(seoAnalysisSummary(completeManualScore).numericBadgeAvailable, true, "the numerical control has fully observed checks");
-assert.equal(analysisPresentation(completeManualScore).qualifier, "No focus keyword", "an unset keyword qualifies the number without hiding it");
+assert.equal(analysisPresentation(completeManualScore).qualifier, "Add a focus keyword", "an unset keyword qualifies the number without hiding it");
+assert.deepEqual([completeManualScore.score <= 79, seoScoreDisplay(completeManualScore).label], [true, "Needs improvement"], "an unset keyword holds the number below Good");
 for (const [name, renderComplete] of [
 	["saved", () => renderHeader(completeManualScore)],
 	["browser", () => renderHeader(null, { analysis: { ...localAnalysis, result: completeManualAnalysis } })],
@@ -3656,7 +3657,7 @@ for (const [name, renderComplete] of [
 	assert.ok(header.includes(`<span aria-hidden="true">${completeManualScore.score}</span>`), name + " retains a fully qualified numerical score");
 	assert.match(header, /class="shipit-seo-native-panel__ring-progress"/);
 	assert.ok(header.includes(`<strong>${seoScoreDisplay(completeManualScore).label}</strong>`), name + " shows the band of the limited score");
-	assert.match(header, /<span>No focus keyword<\/span>/, name + " carries the No focus keyword qualifier");
+	assert.match(header, /<span>Add a focus keyword<\/span>/, name + " carries the Add a focus keyword qualifier");
 	const totals = contentCheckPresentation(completeManualScore).totals;
 	assert.ok(header.includes(`<span>${seoCheckTotalsText(totals)}</span>`), name + " counts are the group sums");
 	assert.doesNotMatch(header, /scored checks|weighted|Weighted|General|Article|aria-live/);

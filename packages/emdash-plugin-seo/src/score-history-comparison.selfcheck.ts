@@ -80,8 +80,8 @@ check("fresh context uses the real shared classifier and stays bounded/private",
 });
 
 check("legacy writers, including analyzer21, do not gain current context or reclassify legacy issues", () => {
-	assert.equal(SEO_SCORE_VERSION, 22);
-	assert.equal(SEO_SCORE_COMPARISON_POLICY, "seo22-scored-v1");
+	assert.equal(SEO_SCORE_VERSION, 24);
+	assert.equal(SEO_SCORE_COMPARISON_POLICY, "seo24-scored-v1");
 	assert.equal(scoreComparisonContextProblem({ ...context, policy: "seo21-scored-v1" }), "invalidContext");
 	for (const scoreVersion of [19, 21]) {
 		const score = { ...analyzedScore(), scoreVersion };

@@ -40,7 +40,7 @@ function check(name: string, run: () => void): void {
 const keys = Object.keys(ANALYZER_20_FIXTURES);
 check("the frozen fixtures are four analyzer 20 records that stored 100", () => {
 	assert.deepEqual(keys, ["a", "d+", "h", "n"]);
-	assert.equal(SEO_SCORE_VERSION, 22);
+	assert.equal(SEO_SCORE_VERSION, 24);
 	for (const { score, snapshot } of Object.values(ANALYZER_20_FIXTURES)) {
 		assert.equal(score.scoreVersion, 20);
 		assert.equal(snapshot.scoreVersion, 20);

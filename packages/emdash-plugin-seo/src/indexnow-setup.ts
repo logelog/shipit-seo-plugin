@@ -2,6 +2,7 @@ import type { PluginContext } from "emdash";
 import { SEO_ADMIN_INDEXNOW_STORAGE_VERSION, type SeoAdminIndexNowSetupStep } from "./admin-contract.ts";
 import { supportsConditionalStorage } from "./conditional-storage.ts";
 import {
+	INDEXNOW_DEFAULT_KEY_LOCATION,
 	UNKNOWN_INDEXNOW_INSTALLATION,
 	createIndexNowKey,
 	defaultIndexNowSettings,
@@ -17,7 +18,7 @@ import {
 	writeVersionedIndexNowSettings,
 	type StoredIndexNowSettings,
 } from "./indexnow-runtime.ts";
-import { IndexNowSetupError, indexNowVerificationUrl, verifyIndexNowKey } from "./indexnow-verification.ts";
+import { IndexNowSetupError, indexNowVerificationUrl, readExistingIndexNowKey, verifyIndexNowKey } from "./indexnow-verification.ts";
 import type { OperationLeaseOwner } from "./operation-lease.ts";
 
 function settingsChanged(step: SeoAdminIndexNowSetupStep): never {
@@ -46,6 +47,11 @@ async function setupIndexNowUnlocked(
 	// site that was on before keeps its saved choice when it is verified again.
 	const activatedBefore = stored.enabled || snapshot.settings?.verification !== undefined;
 	const values = { ...stored, autoSubmit: activatedBefore ? stored.autoSubmit : false };
+	const pendingSetup = snapshot.settings?.pendingSetup;
+	const resumesGeneratedKey = pendingSetup?.siteOrigin === new URL(siteUrl).origin;
+	const adoptExistingKey = (!stored.apiKey || resumesGeneratedKey) && !activatedBefore &&
+		installation.mode === "astro" && installation.keyRoute === "existing" &&
+		values.keyLocation === INDEXNOW_DEFAULT_KEY_LOCATION;
 	values.apiKey ||= createIndexNowKey();
 	const verificationUrl = indexNowVerificationUrl(values, siteUrl);
 	let revision = snapshot.revision;
@@ -58,12 +64,19 @@ async function setupIndexNowUnlocked(
 			version: SEO_ADMIN_INDEXNOW_STORAGE_VERSION,
 			updatedAt: nextIndexNowSettingsUpdatedAt(updatedAt),
 			values: { ...values, enabled: false },
+			...(adoptExistingKey ? { pendingSetup: {
+				siteOrigin: new URL(siteUrl).origin, apiKey: values.apiKey,
+				keyLocation: INDEXNOW_DEFAULT_KEY_LOCATION,
+			} } : {}),
 		};
 		revision = await writeVersionedIndexNowSettings(ctx, revision, pending);
 		if (revision === null) settingsChanged("key");
 		updatedAt = pending.updatedAt;
 	}
-	const verification = await verifyIndexNowKey(ctx, values, siteUrl);
+	const verification = adoptExistingKey
+		? await readExistingIndexNowKey(ctx, values, siteUrl)
+		: await verifyIndexNowKey(ctx, values, siteUrl);
+	if (adoptExistingKey) values.apiKey = verification.apiKey;
 	if (indexNowVerificationUrl(values, await getSiteUrl()) !== verificationUrl)
 		throw new IndexNowSetupError("The website address changed during setup. Refresh the settings and try again.", "verify");
 	if (!(await owner.renew())) throw new IndexNowSetupError("IndexNow setup lost queue ownership. Refresh and try again.", "enable");

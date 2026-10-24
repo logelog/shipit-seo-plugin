@@ -57,6 +57,8 @@ import {
 	indexNowEventLabel,
 	indexNowHistoryRange,
 	indexNowHttpResult,
+	indexNowKeyLocationHelp,
+	indexNowSetupCopy,
 	indexNowScopeRows,
 	indexNowSourceLabel,
 	indexNowSubmissionPresentation,
@@ -134,19 +136,20 @@ interface StepView {
 
 function setupSteps(status: SeoAdminIndexNowStatus, running: boolean, failedStep: SeoAdminIndexNowSetupStep | null): StepView[] {
 	const issue = status.setup.issue;
+	const copy = indexNowSetupCopy(status);
 	const verified = status.setup.verifiedAt !== null;
 	const keyFailed = failedStep === "key";
 	const verifyFailed = failedStep === "verify" || failedStep === "origin";
 	return [
 		{
-			title: "Create a key",
-			description: status.setup.keySaved ? "Saved for this site. Delivery stays off until the check passes." : "Created automatically when you turn IndexNow on.",
-			state: keyFailed ? "Not saved" : status.setup.keySaved ? "Saved" : running ? "Creating" : "Automatic",
+			title: copy.keyTitle,
+			description: copy.keyDescription,
+			state: keyFailed ? "Not saved" : status.setup.keySaved ? "Saved" : running ? "Preparing" : "Automatic",
 			tone: keyFailed ? "failed" : status.setup.keySaved ? "done" : running ? "running" : "waiting",
 		},
 		{
 			title: "Check the key file",
-			description: "Read from your site address to confirm the site is yours.",
+			description: copy.fileDescription,
 			state: issue ? issue.code === "local-site" || issue.code === "missing-site" || issue.code === "invalid-site" ? "Needs a public HTTPS address" : "Needs installation"
 				: verifyFailed ? "Check failed" : verified ? "Verified" : running ? "Checking" : "Waiting",
 			tone: issue ? "blocked" : verifyFailed ? "failed" : verified ? "done" : running ? "running" : "waiting",
@@ -582,6 +585,7 @@ export function IndexNowView() {
 	const issue = status.setup.issue;
 	const verified = status.values.enabled && status.setup.verifiedAt !== null;
 	const showSetup = !verified || status.readiness.state !== "ready";
+	const setupCopy = indexNowSetupCopy(status);
 	const available = status.contentTypes.map((item) => item.collection);
 	const submittable = submittableIndexNowTypes(available, status.contentTypeRules);
 	const savedScope = status.values.autoSubmitContentTypes;
@@ -657,7 +661,7 @@ export function IndexNowView() {
 						</div>
 					) : null}
 					<h3 id="shipit-indexnow-setup-title">{status.values.enabled ? "Finish IndexNow setup" : "Turn on IndexNow"}</h3>
-					<p>It takes one step. This plugin creates the key and checks it for you, so there is nothing to copy or paste.</p>
+					<p>{setupCopy.description}</p>
 					<SetupStepList steps={setupSteps(status, busy === "setup", setupFailure?.step ?? null)} />
 					{setupFailure ? <p className="shipit-seo-form-error" role="alert">{setupFailure.text}</p> : null}
 					<div className="shipit-indexnow-setup-action">
@@ -821,7 +825,7 @@ export function IndexNowView() {
 									<Input
 										label="Verification key"
 										data-seo-setting="indexNowKey"
-										description="Created automatically. Replace it only if it was exposed somewhere it should not be."
+										description="This key verifies your site. It is public in the verification file."
 										value={view.advanced.values.apiKey}
 										maxLength={128}
 										error={advancedErrors.apiKey}
@@ -835,7 +839,7 @@ export function IndexNowView() {
 								<Input
 									label="Key file location"
 									data-seo-setting="indexNowKeyLocation"
-									description="Served at /indexnow-key.txt by this plugin's installation. A custom location on this site must be served separately."
+									description={indexNowKeyLocationHelp(status.setup.keyRoute, view.advanced.values.keyLocation)}
 									value={view.advanced.values.keyLocation}
 									error={advancedErrors.keyLocation}
 									aria-invalid={Boolean(advancedErrors.keyLocation)}
@@ -865,7 +869,7 @@ export function IndexNowView() {
 										<div><dt>Endpoint</dt><dd>{status.endpoint}</dd></div>
 										<div><dt>Background queue</dt><dd>{status.capabilities.cron ? "Available" : "Unavailable"}</dd></div>
 									</dl>
-									<p>Developers install the plugin through its Astro integration in the Astro configuration and set Astro's <code>site</code> option to the public HTTPS address. That one step allows the key file check for that hostname and serves the key file. It cannot be changed from this admin.</p>
+									<p>Developers install the plugin through its Astro integration in the Astro configuration and set Astro's <code>site</code> option to the public HTTPS address. The integration serves the key file unless the site already owns its route. These installation settings cannot be changed from this admin.</p>
 								</details>
 								{status.values.enabled ? (
 									<div className="shipit-indexnow-danger">

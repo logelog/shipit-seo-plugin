@@ -299,6 +299,15 @@ check("a matching current check shows the band of the stored result beside the s
 	});
 });
 
+check("an unset focus keyword shows the same number below Good in the Overview row and the editor", () => {
+	assert.deepEqual([numbered.score, seoAnalysisPresentation(numbered)], [79, { label: "Needs improvement", qualifier: "Add a focus keyword", tone: "review" }]);
+	const row = healthRow(numbered, { presentation: seoAnalysisPresentation(numbered), needsAttention: true });
+	const editor = contentHealthScoreCell(row, structuredClone(numbered));
+	const saved = contentHealthScoreCell(row);
+	assert.deepEqual([editor.badgeText, editor.variant, editor.label, editor.qualifier], ["79", "warning", "Needs improvement", "Add a focus keyword"]);
+	assert.deepEqual([saved.badgeText, saved.variant, saved.label, saved.qualifier], [editor.badgeText, editor.variant, editor.label, editor.qualifier]);
+});
+
 check("a matching stale check keeps the saved number and asks for a refresh", () => {
 	const row = healthRow(numbered);
 	assert.deepEqual(contentHealthScoreCell(row, { ...numbered, freshness: "stale" }), {

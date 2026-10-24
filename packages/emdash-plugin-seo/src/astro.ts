@@ -9,6 +9,7 @@ import type { PluginDescriptor } from "emdash";
 import { SEO_ENGINE_PLUGIN_ID } from "./admin-contract.ts";
 import { SEO_BRAND_NAME_COMFORTABLE_LENGTH, seoBrandNameLength } from "./branding.ts";
 import { checkShipitSeoOptions, resolveSeoBranding, type ShipitSeoOptions } from "./branding-files.ts";
+import { checkContentAnalysisOptions } from "./content-body-mapping.ts";
 import { seoPlugin } from "./index.ts";
 import { classifyIndexNowSite, type IndexNowKeyRoute, type IndexNowSiteIssue } from "./indexnow.ts";
 import { listLlmsTxtDirectory } from "./llms-txt-files.ts";
@@ -66,6 +67,7 @@ const LLMS_TXT_MIDDLEWARE_ENTRYPOINT = new URL(
 const LLMS_TXT_OWNER_MODULE = "virtual:shipit-seo/llms-txt-owner";
 const RESOLVED_LLMS_TXT_OWNER_MODULE = `\0${LLMS_TXT_OWNER_MODULE}`;
 
+export type { SeoContentAnalysisOptions, SeoBodyMapping, SeoBodyBlock, SeoBodyField } from "./content-body-mapping.ts";
 export type { ShipitSeoBranding, ShipitSeoOptions } from "./branding-files.ts";
 
 interface EmDashConfigShape {
@@ -223,6 +225,7 @@ export function shipitSeo<Config extends EmDashConfigShape>(
 		throw new Error("Pass EmDash's Astro integration: shipitSeo(emdash, config).");
 	}
 	const brandingShape = checkShipitSeoOptions(options);
+	const contentAnalysis = checkContentAnalysisOptions(options?.contentAnalysis);
 	if (config.plugins !== undefined && !Array.isArray(config.plugins)) {
 		throw new Error("EmDash plugins must be a list.");
 	}
@@ -305,6 +308,7 @@ export function shipitSeo<Config extends EmDashConfigShape>(
 						return { id: field("id", 128), entrypoint: field("entrypoint", 512), version: field("version", 128) };
 					}),
 				...(branding ? { branding } : {}),
+				...(contentAnalysis ? { contentAnalysis } : {}),
 			},
 		};
 		Object.assign(descriptor, seoPlugin(installedOptions));
