@@ -21,6 +21,26 @@ A mode listed here describes the runner, not a passing test or release acceptanc
 
 ## Beta verification coverage
 
+### 0.4.0-beta.57 (unreleased)
+
+This candidate is not yet available on npm. Its checks do not change the
+verified scope of the published beta.56 package.
+
+| Environment | Checked scope |
+| --- | --- |
+| Native EmDash/admin 1.3.1 on Node/SQLite | Package build, both typechecks, engine and admin selfchecks through quick verification |
+| Hosted Workers/D1 with EmDash and Cloudflare adapter 1.3.1 | Exact-archive update on an existing site, production build, deployment, automatic browser checks for explicitly mapped custom blocks, preserved published content, and public sitemap/robots.txt/llms.txt responses |
+
+The hosted checks cover the existing shipitseo.com installation. Its browser
+cases used the General content profile with no focus keyword; each opened
+with a score below Good while optional server analysis remained off. Article
+length limits and incomplete-body handling were checked locally. This does
+not qualify every Workers installation or its complete update and recovery
+lifecycle. Workers/D1 remains experimental.
+
+See [content checks](content-checks.md) for the scoring rules and custom-block
+mapping requirements in this candidate.
+
 ### 0.4.0-beta.56
 
 | Environment | Checked scope |
@@ -50,10 +70,11 @@ receipt does not establish crawling or indexing.
 
 Full native 1.3.1 verification, every lifecycle UI flow, native SEO dirty-draft
 and lost-acknowledgement recovery, full editor locale switching, and npm
-update/removal/reinstallation remain unqualified. Workers/D1 needs separate
-hosted admin, lifecycle and provider-delivery checks. Postgres and
-sandbox/registry installation remain unverified. A static Cloudflare Pages
-deployment does not establish Workers/D1 runtime compatibility.
+update/removal/reinstallation remain unqualified for that release. Later
+candidate checks are listed separately above. Complete Workers/D1 installation and recovery workflows,
+provider delivery, Postgres and sandbox/registry installation remain
+unqualified. A static Cloudflare Pages deployment does not establish
+Workers/D1 runtime compatibility.
 
 See the [indexing guide](indexing.md) for public-output and submission checks.
 
