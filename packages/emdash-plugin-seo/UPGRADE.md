@@ -1,7 +1,7 @@
 # Upgrade Shipit SEO
 
 <!-- compatibility:package:start -->
-Version `0.4.0-beta.56` is a native beta.
+Version `0.4.0-beta.57` is a native beta.
 
 Native EmDash/admin support: **1.3.1 or 1.3.0**.
 Use Node **24.19.0**, Astro **7.3.2** and SQLite.
@@ -40,13 +40,13 @@ an unreviewed compatibility mismatch.
 For a pnpm site:
 
 ```sh
-pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.56
+pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.57
 ```
 
 For npm, use this instead; review the lifecycle limits below before proceeding:
 
 ```sh
-npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.56
+npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.57
 ```
 
 Keep one lockfile and review its diff. Retain the Astro wrapper, host adapter,
@@ -96,6 +96,20 @@ Earlier @shipit-scoped alpha packages have no tested or supported migration
 path to this package. Treat that as a separate migration with its own backup
 and rehearsal.
 
+## IndexNow setup after an update
+
+Updating does not rotate the saved key or turn delivery on. **Enable IndexNow**
+verifies the public key file before enabling delivery. It preserves manually
+configured keys, custom locations and keys from previous activations.
+
+When no key has been configured, first Astro setup can reuse a valid site-owned
+file at the default `/indexnow-key.txt` path. **Try again** can finish this
+automatic setup after a failed check. Manually configured keys are preserved;
+if one differs from the existing file, review both and choose which to keep.
+Setup does not overwrite a site-owned file. See the
+[indexing guide](https://github.com/logelog/shipit-seo-plugin/blob/main/docs/indexing.md#enable-indexnow)
+for the public-file requirements and failure messages.
+
 ## Scores and earlier evaluation builds
 
 The plugin and analyzer versions are part of saved-result identity. An upgrade
@@ -104,10 +118,10 @@ analyzer result stays stored without a current number or comparison. A resumed
 scan crossing an analyzer change pauses for policy review. Optional work
 remains subject to its existing activation.
 
-Available in **0.4.0-beta.57 (unreleased)**: analyzer 24 marks stored results
-from analyzer 23 and earlier **Earlier analyzer. Analyze again.** Opening an
-entry runs current basic browser checks, including the maximum of 79 without
-a focus keyword, without rewriting its saved result or history.
+In **0.4.0-beta.57**, analyzer 24 marks stored results from analyzer 23 and
+earlier **Earlier analyzer. Analyze again.** Opening an entry runs current basic
+browser checks, including the maximum of 79 without a focus keyword, without
+rewriting its saved result or history.
 
 To refresh a stored result deliberately, confirm its assessment profile, then
 choose **Analysis options > Saved analysis & history > Save analysis**. With

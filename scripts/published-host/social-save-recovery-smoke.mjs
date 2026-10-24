@@ -277,7 +277,7 @@ try {
 	} else {
 		const contract = await import(pathToFileURL(join(packageRoot, manifest.exports["./admin-contract"].default)).href);
 		const contractVersion = contract.SEO_ADMIN_CONTRACT_VERSION;
-		assert.ok([39, 40, 41, 42, 43, 44, 45, 46, 47].includes(contractVersion), "Social recovery requires a supported admin contract");
+		assert.ok([39, 40, 41, 42, 43, 44, 45, 46, 47, 48].includes(contractVersion), "Social recovery requires a supported admin contract");
 		const writes = () => counts.compareAndSet + counts.compareAndDelete;
 		const assertBounded = (maximumReads = 1, maximumWrites = 1) => {
 			assert.equal(counts.put + counts.delete, 0, "Guarded Social routes never use unconditional writes");

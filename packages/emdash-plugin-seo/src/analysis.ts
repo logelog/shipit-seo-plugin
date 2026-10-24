@@ -23,11 +23,11 @@ import {
 } from "./snippet-fit.ts";
 
 /**
- * Version 22 raises article length guidance and requires a minimum sample for repetition,
- * derives score limits from rows and bands the limited score. Results from
- * earlier versions are legacy snapshots: readable, never current.
+ * Version 24 caps assessments without a focus keyword below the Good band.
+ * Explicit saved-body mappings retain their incomplete-body safeguards.
+ * Earlier results remain readable legacy snapshots, never current.
  */
-export const SEO_SCORE_VERSION = 22 as const;
+export const SEO_SCORE_VERSION = 24 as const;
 
 export type SeoCheckStatus = "pass" | "review" | "fail";
 export type SeoCheckSeverity = "info" | "low" | "medium" | "high" | "critical";
@@ -133,6 +133,8 @@ export interface SeoAnalysisInput {
 	publicationStatus?: string | null;
 	body: string;
 	document?: unknown;
+	/** A configured projection could not observe all declared body content. */
+	bodyIncomplete?: boolean;
 	contentImages?: readonly SeoDocumentImageInput[];
 	bodySource?: string;
 	focusKeyword?: string;
@@ -194,14 +196,14 @@ export interface SeoAnalysisResult {
 }
 
 /**
- * Earlier names stay in the union so stored results keep parsing. Analyzer 22
- * emits only `missing-title`, `severely-thin-content`, `thin-content`,
- * `keyword-repetition` and `missing-primary-keyword`, each derived from rows.
+ * Earlier names stay in the union so stored results keep parsing. Current
+ * limits are derived from evaluated rows, including focus-keyword readiness.
  */
 export type SeoScoreLimitReason =
 	| "critical-failure"
 	| "high-failure"
 	| "missing-primary-keyword"
+	| "focus-keyword-unset"
 	| "severely-thin-content"
 	| "high-review"
 	| "missing-title"
@@ -210,7 +212,7 @@ export type SeoScoreLimitReason =
 export interface SeoScoreLimit {
 	reason: SeoScoreLimitReason;
 	cap: number;
-	/** Rows that set the limit, in scored mask order. */
+	/** Evaluated rows that set the limit; keyword readiness can be unweighted. */
 	checkIds: string[];
 }
 export interface SeoScoreCalculation {
@@ -329,10 +331,10 @@ function seoCheckPolicyWeight(id: string, profile?: CollectionAnalysisProfile): 
 }
 
 /** Names the mask order below; stored comparison contexts with another policy are not compared. */
-export const SEO_SCORE_COMPARISON_POLICY = "seo22-scored-v1" as const;
+export const SEO_SCORE_COMPARISON_POLICY = "seo24-scored-v1" as const;
 
 /**
- * Bit order of analyzer 22 scored membership masks. Stored masks are read
+ * Bit order of current scored membership masks. Stored masks are read
  * against this exact list, so adding, removing or reordering an ID needs a new
  * comparison policy version.
  */
@@ -375,6 +377,27 @@ export function classifySeoContentCheck(check: SeoContentCheck, profile?: Collec
 	return { role, eligible, issue: eligible && check.status !== "pass", weight: eligible ? check.weight : 0 };
 }
 
+/** Conditional phrase checks must agree with the measured keyword owner. */
+export function seoKeywordCheckConsistencyProblem(checks: readonly SeoContentCheck[]): string | null {
+	const rows = (id: string) => checks.filter(check => check.id === id);
+	const focus = rows("focus-keyword");
+	if (focus.length !== 1 || focus[0].basis !== "measured" || seoContentCheckProblem(focus[0], true) !== null)
+		return "focus-keyword";
+	const configured = typeof focus[0].evidence.actual === "string";
+	for (const id of ["keyword-title", "keyword-description", "keyword-content"]) {
+		const matches = rows(id);
+		if (matches.length !== 1) return id;
+		const check = matches[0];
+		if (!configured) {
+			if (check.basis !== "not-applicable") return id;
+		} else if (id === "keyword-content" && check.basis === "unavailable") {
+			const depth = rows("content-depth");
+			if (depth.length !== 1 || depth[0].basis !== "unavailable") return id;
+		} else if (check.basis !== "heuristic") return id;
+	}
+	return null;
+}
+
 /** Domain of the fixed current policy, including mandatory metadata membership. */
 export function isSeoScoredCheckMask(value: unknown): value is number {
 	return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 &&
@@ -382,9 +405,10 @@ export function isSeoScoredCheckMask(value: unknown): value is number {
 }
 
 /**
- * Analyzer 22 scored membership as a bit set over SEO_SCORED_CHECK_MASK_IDS,
+ * Current scored membership as a bit set over SEO_SCORED_CHECK_MASK_IDS,
  * carrying no metadata, URL or keyword text. Null unless every row is valid
- * current evidence with a unique ID and both mandatory metadata rows are scored.
+ * current evidence with unique IDs, both metadata rows scored and focus-keyword
+ * readiness measured.
  */
 export function seoScoredCheckMask(checks: unknown, profile?: CollectionAnalysisProfile): number | null {
 	if (!Array.isArray(checks)) return null;
@@ -400,7 +424,7 @@ export function seoScoredCheckMask(checks: unknown, profile?: CollectionAnalysis
 		if (bit < 0) return null;
 		mask |= 1 << bit;
 	}
-	return isSeoScoredCheckMask(mask) ? mask : null;
+	return seoKeywordCheckConsistencyProblem(checks) === null && isSeoScoredCheckMask(mask) ? mask : null;
 }
 
 export function summarizeSeoChecks(checks: readonly SeoContentCheck[], profile?: CollectionAnalysisProfile): SeoAnalysisCoverage & { issues: number; advisories: number; totalWeight: number } {
@@ -483,6 +507,7 @@ const SEO_SCORE_LIMIT_TEXT: Readonly<Record<SeoScoreLimitReason, string>> = {
 	"thin-content": "under 600 words of body text",
 	"keyword-repetition": "high focus keyword density",
 	"missing-primary-keyword": "focus keyword not in title, description or body text",
+	"focus-keyword-unset": "no focus keyword",
 	"critical-failure": "a critical check failed",
 	"high-failure": "a high-severity check failed",
 	"high-review": "a high-severity check needs review",
@@ -507,6 +532,12 @@ export function seoScoreDisplay(result: SeoScoreDisplayInput): SeoScoreDisplay {
 	// The indexing directive is never a checklist row, so it never counts as a row that was not checked.
 	const notChecked = result.checks.filter((check) => check.basis === "unavailable" && check.id !== "indexability" && check.condition === undefined).length;
 	const counts = { issues: totals.issues, suggestions: totals.advisories, notChecked };
+	const keywordProblem = seoKeywordCheckConsistencyProblem(result.checks);
+	if (keywordProblem)
+		return { score: null, band: null, label: "Partially checked",
+			qualifier: keywordProblem === "focus-keyword" ? "Focus keyword settings not checked" : "Keyword checks could not be confirmed",
+			limit: null, ...counts };
+
 	// An unavailable metadata row is counted with the other unavailable rows below.
 	const missingMetadata = ["title", "description"].filter((id) =>
 		!result.checks.some((check) => check.id === id && (check.basis === "measured" || check.basis === "unavailable"))).length;
@@ -526,8 +557,9 @@ export function seoScoreDisplay(result: SeoScoreDisplayInput): SeoScoreDisplay {
 	const keywordUnset = result.checks.some((check) => check.id === "focus-keyword" && check.basis === "measured" && check.status === "review");
 	// A named limit never hides an unset focus keyword: both facts stay in the one qualifier.
 	const qualifiers = [
-		...(limit && calculation.rawScore > limit.cap ? [seoScoreLimitText(limit)] : []),
-		...(keywordUnset ? ["No focus keyword"] : []),
+		...(limit?.reason === "focus-keyword-unset" ? ["Add a focus keyword"] :
+			limit && calculation.rawScore > limit.cap ? [seoScoreLimitText(limit)] : []),
+		...(keywordUnset && limit?.reason !== "focus-keyword-unset" ? ["No focus keyword"] : []),
 	];
 	return { score: result.score, band, label: seoScoreBandLabel(band), qualifier: qualifiers.join(". ") || null, limit, ...counts };
 }
@@ -582,7 +614,7 @@ export function seoAnalysisPresentation(result: SeoScoreDisplayInput): Pick<SeoA
 }
 
 function bodyEvidenceUnavailable(input: SeoAnalysisInput, signals: SeoDocumentSignals): boolean {
-	if (input.bodySource?.trim() === "template") return true;
+	if (input.bodyIncomplete || input.bodySource?.trim() === "template") return true;
 	if (signals.wordCount > 0) return false;
 	return signals.bodyFormat === "none" || signals.bodyFormat === "unsupported" || signals.unsupportedBlockCount > 0;
 }
@@ -690,6 +722,9 @@ export function seoContentCheckProblem(value: unknown, current: boolean, profile
 			if (value.status === "pass" && (!syntax.valid || syntax.fragment)) return "url-evidence";
 			// A syntactically valid URL can still fail the caller's authoritative site/route validation.
 		}
+		if (value.id === "focus-keyword" && (value.basis !== "measured" ||
+			(actual === null ? value.status !== "review" : typeof actual !== "string" || actual !== actual.trim() ||
+				!normaliseSeoKeywordText(actual) || value.status !== "pass"))) return "focus-keyword-evidence";
 		if (value.id === "image-alt-text" && (!Number.isSafeInteger(actual) || Number(actual) < 0 || value.status !== (actual === 0 ? "pass" : "fail"))) return "alt-evidence";
 		// Score limits are derived from these counts, so a stored count must agree with its status.
 		if (value.id === "content-depth" && (!Number.isSafeInteger(actual) || Number(actual) < 0 ||
@@ -783,10 +818,15 @@ export function analyzeSeoContent(input: SeoAnalysisInput): SeoAnalysisResult {
 
 	const bodyUnavailable = bodyEvidenceUnavailable(input, signals);
 	const checks = rawChecks.map((check) => {
+		if (input.bodyIncomplete && ((check.id === "image-alt-text" && input.imageSeoEnabled !== false) ||
+   (check.id === "secondary-keyword-coverage" && check.basis !== "not-applicable" && check.status !== "pass"))) {
+   return unavailableCheck(check.id, check.label, check.category,
+    "Not all saved body content can be checked.", "complete saved body evidence", "saved body", SAVED_BODY_LIMITATION);
+  }
 		if (bodyUnavailable && BODY_CHECK_IDS.has(check.id) &&
 			(!check.id.startsWith("keyword-") || Boolean(focusKeyword))) {
 			return unavailableCheck(check.id, check.label, check.category,
-				"Saved body evidence is not observed for this entry.",
+				input.bodyIncomplete ? "Not all saved body content can be checked." : "Saved body evidence is not observed for this entry.",
 				"observed saved body content", "saved body", SAVED_BODY_LIMITATION);
 		}
 		return applySeoCheckPolicy(check, profile);
@@ -839,7 +879,7 @@ function focusKeywordConfiguredCheck(keyword: string | undefined): SeoContentChe
 		detail: `Focus keyword: "${keyword}".`, evidence, limitation, recommendation: "Choose a keyword that reflects the page topic.",
 	} : {
 		id: "focus-keyword", label: "Focus keyword", category: "keyword", severity: "info", status: "review", weight: 0, basis: "measured",
-		detail: "No focus keyword is set, so keyword checks are not part of the score.", evidence, limitation,
+		detail: "Add a focus keyword to complete the keyword checks.", evidence, limitation,
 		recommendation: "Add a focus keyword to check the title, description and body text for it.",
 	};
 }
@@ -1089,6 +1129,8 @@ function imageAltTextChecks(signals: SeoDocumentSignals, enabled: boolean, templ
 function seoScoreLimits(checks: readonly SeoContentCheck[]): SeoScoreLimit[] {
 	const evaluated = (id: string) => checks.find((check) => check.id === id && isScoredSeoCheckBasis(check.basis));
 	const limits: SeoScoreLimit[] = [];
+	if (evaluated("focus-keyword")?.evidence.actual === null)
+		limits.push({ reason: "focus-keyword-unset", cap: 79, checkIds: ["focus-keyword"] });
 	if (evaluated("title")?.status === "fail") limits.push({ reason: "missing-title", cap: 49, checkIds: ["title"] });
 	const depth = evaluated("content-depth");
 	if (depth && depth.weight > 0 && typeof depth.evidence.actual === "number") {
@@ -1111,6 +1153,8 @@ export function calculateSeoScore(checks: readonly SeoContentCheck[], profile?: 
 		if (seen.has(check.id)) throw new Error(`Duplicate current check: ${check.id}`);
 		seen.add(check.id);
 	}
+	const keywordProblem = seoKeywordCheckConsistencyProblem(checks);
+	if (keywordProblem) throw new Error(`Keyword check evidence is inconsistent: ${keywordProblem}.`);
 	const eligible = checks.filter(check => classifySeoContentCheck(check, profile).eligible);
 	const totalWeight = eligible.reduce((sum, check) => sum + check.weight, 0);
 	// Hundredths keep the earned share exact, so a half rounds up instead of a float artifact rounding down.

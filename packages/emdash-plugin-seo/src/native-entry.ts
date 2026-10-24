@@ -97,6 +97,7 @@ export function createPlugin(options: SeoPluginOptions = {}): ResolvedPlugin {
 			...(llmsTxt ? { llmsTxt } : {}),
 			scoreScan: nativeScoreScanHost(descriptor),
 			...(branding.kind === "configured" ? { branding: branding.branding } : {}),
+			...(options.installation?.contentAnalysis ? { contentAnalysis: options.installation.contentAnalysis } : {}),
 			internalLinks: createLinkNativeHostFactory({ openDatabase: hostDatabase }),
 			coexistence: createNativeCoexistenceHost({
 				openDatabase: hostDatabase,

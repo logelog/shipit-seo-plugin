@@ -14,6 +14,8 @@ import {
 	indexNowEventLabel,
 	indexNowHistoryRange,
 	indexNowHttpResult,
+	indexNowKeyLocationHelp,
+	indexNowSetupCopy,
 	indexNowScopeRows,
 	indexNowSubmissionPresentation,
 	indexNowSubmissionSummary,
@@ -35,6 +37,46 @@ import {
 	reconcileSavedIndexNowDraft,
 	INDEXNOW_ADVANCED_FIELDS,
 } from "./indexnow-view-model.ts";
+
+const setupCopyState = {
+	setup: { installation: "astro", keyRoute: "injected", keySaved: false },
+	values: { keyLocation: "/indexnow-key.txt" },
+} as const;
+const injectedCopy = indexNowSetupCopy(setupCopyState);
+assert.equal(injectedCopy.keyTitle, "Create a key");
+assert.match(injectedCopy.description, /creates and checks the public key file/);
+assert.match(injectedCopy.fileDescription, /served by this plugin/);
+const existingCopy = indexNowSetupCopy({
+	...setupCopyState, setup: { ...setupCopyState.setup, keyRoute: "existing" },
+});
+assert.equal(existingCopy.keyTitle, "Use the site's key");
+assert.match(existingCopy.description, /reuses the valid key in this site's file/);
+assert.match(existingCopy.fileDescription, /site's existing verification file/);
+const savedExistingCopy = indexNowSetupCopy({
+	...setupCopyState, setup: { ...setupCopyState.setup, keyRoute: "existing", keySaved: true },
+});
+assert.equal(savedExistingCopy.keyTitle, "Use the saved key");
+assert.match(savedExistingCopy.description, /checks the saved key against this site's file/);
+assert.doesNotMatch(savedExistingCopy.description, /reuses|creates/,
+	"an existing saved key is checked, not silently replaced by the site's file");
+assert.match(savedExistingCopy.keyDescription, /Delivery stays off until the check passes/);
+const customCopy = indexNowSetupCopy({ ...setupCopyState, values: { keyLocation: "/custom-key.txt" } });
+assert.match(customCopy.description, /custom verification file/);
+assert.doesNotMatch(customCopy.description, /creates|reuses/,
+	"a custom file is never advertised as generated or adopted");
+const legacyExistingCopy = indexNowSetupCopy({
+	...setupCopyState, setup: { ...setupCopyState.setup, installation: "legacy", keyRoute: "existing" },
+});
+assert.doesNotMatch(legacyExistingCopy.description, /reuses/,
+	"only the Astro installation can adopt an existing file's key");
+assert.match(indexNowKeyLocationHelp("injected", "/indexnow-key.txt"), /plugin serves the saved key/);
+assert.match(indexNowKeyLocationHelp("existing", "/indexnow-key.txt"), /plugin does not replace this file/);
+assert.match(indexNowKeyLocationHelp("unavailable", "/indexnow-key.txt"), /cannot serve/);
+assert.doesNotMatch(indexNowKeyLocationHelp(null, "/indexnow-key.txt"), /plugin serves/);
+for (const route of ["injected", "existing", "unavailable", null] as const) {
+	assert.match(indexNowKeyLocationHelp(route, "/custom-key.txt"), /custom file must serve the saved key/);
+	assert.doesNotMatch(indexNowKeyLocationHelp(route, "/custom-key.txt"), /No file upload is needed/);
+}
 
 const persisted = {
 	...defaultIndexNowSettings(),

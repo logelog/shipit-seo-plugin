@@ -1,3 +1,4 @@
+import { projectContentBody } from "../content-body-mapping.ts";
 import type {
 	SeoAdminAnalysisProfile,
 	SeoAdminCollectionAnalysisProfileSelection,
@@ -135,8 +136,11 @@ export function resolveEditorBasicAnalysis(input: EditorBasicAnalysisInput): Edi
 		? { profile: input.assessment.profile, version: input.assessment.version }
 		: { profile: collection === "posts" ? "article" as const : "general" as const, version: 1 as const };
 	const data = input.snapshot.data;
-	// Custom field names require a collection definition, which this preview does not carry.
-	const document = contentBodyValue(data, null);
+	// The installed template mapping and saved body field come from the same preview.
+	const bodyPlan = preview.bodyAnalysis ?? { bodyField: null };
+	if (bodyPlan.mapping && (bodyPlan.mapping.collection !== preview.content.collection || bodyPlan.mapping.slugs && !bodyPlan.mapping.slugs.includes(preview.content.slug))) return unavailable("Saved body mapping does not match this entry.");
+	const projected = projectContentBody(data, bodyPlan);
+	const document = projected.document;
 	// Settings from the same preview snapshot; undefined means an older server that does not send them.
 	const settings = preview.analysis;
 	const imageSeoEnabled = settings ? settings.imageAltChecks : input.imageSeoEnabled;
@@ -161,6 +165,7 @@ export function resolveEditorBasicAnalysis(input: EditorBasicAnalysisInput): Edi
 		publicationStatus: input.publicationStatus,
 		body: extractSeoDocumentText(document),
 		document,
+		bodyIncomplete: projected.incomplete,
 		contentImages: contentImageInputs(data),
 		bodySource: typeof data.body_source === "string" ? data.body_source : undefined,
 		focusKeywords: keywordOwnership.display,
@@ -172,7 +177,8 @@ export function resolveEditorBasicAnalysis(input: EditorBasicAnalysisInput): Edi
 		imageSeoEnabled: imageSeoEnabled ?? true,
 	});
 	// The default body field is read before any custom one, so only without it can the server's body differ.
-	const bodyUnobserved = !Object.prototype.hasOwnProperty.call(data, "content");
+	const selectedBodyField = bodyPlan.mapping ? bodyPlan.bodyField : Object.hasOwn(data, "content") ? "content" : bodyPlan.bodyField;
+	const bodyUnobserved = !selectedBodyField || !Object.hasOwn(data, selectedBodyField);
 	const checks = result.checks.map((check) => {
 		if (partialMetadata && (
 			["metadata", "indexability", "social", "schema", "links"].includes(check.category) ||

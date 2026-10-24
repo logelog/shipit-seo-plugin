@@ -149,7 +149,7 @@ try {
 		const rejectedOptions: Array<[unknown, RegExp]> = [
 			["Acme", /^Error: shipitSeo options must be an object/],
 			[[], /^Error: shipitSeo options must be an object/],
-			[{ brand: { name: "Acme" } }, /^Error: shipitSeo options: unknown option "brand"\. The only option is branding\.$/],
+			[{ brand: { name: "Acme" } }, /^Error: shipitSeo options: unknown option "brand"\. Use branding or contentAnalysis\.$/],
 			[{ branding: "Acme" }, /^Error: shipitSeo branding must be an object/],
 			[{ branding: { name: "Acme", color: "#fff" } }, /^Error: shipitSeo branding: unknown option "color"\. Use name, logo and logoDark\.$/],
 			[{ branding: { logo: "/logo.svg" } }, /^Error: shipitSeo branding\.name is required when branding is set\.$/],
@@ -251,6 +251,18 @@ try {
 		await rejects(site({ "logo.svg": svg() }), { branding: { name: "Acme", logo: "/logo.svg" } }, /needs Astro's base path to use only letters/, "base path", { base: "/d%C3%A9" });
 		cases += 1;
 	}
+
+ {
+  const contentAnalysis = { mappings: [{ collection: "pages", bodyField: "content", blocks: [
+   { type: "callout", version: 1, fields: [{ kind: "text", path: ["body"] }] },
+  ] }] };
+  const result = await settle(site(), { contentAnalysis });
+  assert.deepEqual(result.options.installation?.contentAnalysis, contentAnalysis, "Astro serializes validated body mappings into the plugin descriptor");
+  contentAnalysis.mappings[0].bodyField = "changed";
+  assert.equal(result.options.installation?.contentAnalysis?.mappings[0].bodyField, "content", "later site-option mutations do not change the descriptor");
+  await rejects(site(), { contentAnalysis: { mappings: [{ collection: "pages", bodyField: "constructor", blocks: [] }] } }, /contentAnalysis/, "unsafe content field");
+  cases += 1;
+ }
 } finally {
 	rmSync(workspace, { recursive: true, force: true });
 }

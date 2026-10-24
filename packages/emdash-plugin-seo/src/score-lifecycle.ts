@@ -1,3 +1,4 @@
+import { copyContentAnalysis } from "./content-body-mapping.ts";
 import type { PluginContext } from "emdash";
 
 import type { EntryAnalysisPurpose } from "./analysis-admission.ts";
@@ -420,6 +421,7 @@ class SavedEntryInputReads {
 			...(schema ? { schema } : {}),
 			...(settings ? { settings } : {}),
 		} as unknown as PluginContext;
+		copyContentAnalysis(host, this.facade);
 		return this.facade;
 	}
 }
@@ -524,6 +526,7 @@ async function captureSavedEntryInputs(ctx: PluginContext, request: SavedEntryRe
 		template: { token: templateUpdatedAt, values: template },
 		collection: definition,
 		assessmentProfile: { profile: assessmentProfile.profile, version: assessmentProfile.version },
+		...(runtimeConfig.contentAnalysis ? { contentAnalysis: runtimeConfig.contentAnalysis } : {}),
 		reads: captured.filter(([key]) => !templateStorageRead(key) && !COLLECTION_DISCOVERY_READS.has(key))
 			.map(([key, read]) => [key, semanticConfigurationRead(key, read, request.collection)]),
 	}));

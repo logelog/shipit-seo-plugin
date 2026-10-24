@@ -13,8 +13,8 @@ import {
 	defaultSeoAdminTemplateSet,
 } from "./admin-contract.ts";
 import seoRuntime from "./sandbox-entry.ts";
-import { analyzeSeoContent, summarizeSeoChecks } from "./analysis.ts";
-import { parseSeoAdminTemplateConfiguration } from "./admin-ui/contract.ts";
+import { analyzeSeoContent, seoAnalysisPresentation, summarizeSeoChecks } from "./analysis.ts";
+import { parseSeoAdminOverview, parseSeoAdminTemplateConfiguration } from "./admin-ui/contract.ts";
 import { savedContentVersion } from "./admin-ui/saved-content-snapshot.ts";
 import { GLOBAL_SETTINGS_KEY } from "./settings-runtime.ts";
 import { collectionAnalysisProfileKey } from "./collection-analysis-profile.ts";
@@ -1482,6 +1482,35 @@ check(
 		shortArticleOverview.content[0]?.firstIssue.startsWith("Body text length: ") === true &&
 		overviewContentReads === 0 && JSON.stringify([kvWrites, scoreWrites, scoreDeletes, analysisProfileWrites]) === JSON.stringify(overviewWritesBefore),
 	JSON.stringify({ shortArticleChecks, summary: shortArticleOverview.summary, content: shortArticleOverview.content, overviewContentReads, writes: [kvWrites, scoreWrites, scoreDeletes, analysisProfileWrites], overviewWritesBefore }),
+);
+const unsetKeywordParagraph = "Useful audience research connects clear messaging, measurement, channel strategy, and sustained demand.";
+const unsetKeywordAnalysis = analyzeSeoContent({
+	ref: firstScore.ref, collection: firstScore.collection, entryId: firstScore.entryId, slug: firstScore.slug,
+	title: "Growth marketing strategy for measurable demand",
+	description: "A practical growth marketing strategy that connects search, content, paid media and measurement to build qualified demand and sustainable growth.",
+	url: "https://example.com/posts/test", noindex: false, image: "https://example.com/social.jpg", featuredImage: "https://example.com/featured.jpg",
+	schemaEnabled: true, schemaPreset: "BlogPosting",
+	body: Array.from({ length: 60 }, () => unsetKeywordParagraph).join(" "),
+	document: [
+		{ _type: "block", style: "h2", children: [{ _type: "span", text: "Growth marketing strategy foundations" }] },
+		{ _type: "block", style: "normal", markDefs: [{ _key: "internal", _type: "link", href: "/services/search" }], children: [
+			{ _type: "span", text: "Review our ", marks: [] }, { _type: "span", text: "search service", marks: ["internal"] }, { _type: "span", text: ".", marks: [] },
+		] },
+		...Array.from({ length: 60 }, () => ({ _type: "block", style: "normal", children: [{ _type: "span", text: unsetKeywordParagraph }] })),
+	],
+	assessmentProfile: firstScore.assessmentProfile,
+});
+const unsetKeywordOverview = await sampleOverview({ rows: [{ ...firstScore, ...unsetKeywordAnalysis }] });
+const unsetKeywordRow = unsetKeywordOverview.content[0];
+check(
+	"overview flags an entry that only an unset focus keyword holds below Good, and the admin contract accepts it",
+	summarizeSeoChecks(unsetKeywordAnalysis.checks).issues === 0 && unsetKeywordAnalysis.score === 79 &&
+		unsetKeywordOverview.summary.needsAttention === 1 && unsetKeywordRow?.needsAttention === true &&
+		JSON.stringify(unsetKeywordRow?.presentation) === JSON.stringify(seoAnalysisPresentation({ ...firstScore, ...unsetKeywordAnalysis })) &&
+		unsetKeywordRow?.presentation?.qualifier === "Add a focus keyword" &&
+		unsetKeywordRow?.firstIssue === "Focus keyword: Add a focus keyword to complete the keyword checks." &&
+		parseSeoAdminOverview(unsetKeywordOverview).content[0]?.needsAttention === true,
+	JSON.stringify({ checks: summarizeSeoChecks(unsetKeywordAnalysis.checks), score: unsetKeywordAnalysis.score, summary: unsetKeywordOverview.summary, content: unsetKeywordOverview.content }),
 );
 for (const [state, profile] of [
 	["unconfigured", null],

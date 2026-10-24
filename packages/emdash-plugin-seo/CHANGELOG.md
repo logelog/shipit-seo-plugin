@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.0-beta.57
+
+- Keep scores below the Good band until a focus keyword is set. Missing
+  keyword checks no longer allow a perfect score by omission.
+- Reject inconsistent keyword evidence in current results and keep earlier
+  analyzer results separate from current scores.
+- Analyze custom content blocks through explicit, versioned field mappings in
+  the site configuration. Editor and server checks share extraction and keep
+  unknown or incomplete content unscored.
+- Read declared body fields in automatic editor checks, and invalidate saved
+  results when their content mapping changes.
+- Complete IndexNow key creation, verification and activation from one action.
+  First Astro setup can reuse a valid key at the default site-owned file and
+  resume after a failed check. Manually configured keys, custom locations and
+  keys from previous activations stay unchanged.
+- Explain blocked or missing IndexNow key files, redirects, invalid responses
+  and mismatched keys without enabling delivery on a failed first setup.
+
 ## 0.4.0-beta.56
 
 - Commit a bulk-analysis score and its outcome receipt atomically on D1, with

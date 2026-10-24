@@ -43,7 +43,7 @@ check("new analysis rows and the snippet note name no product", () => {
 			}
 		}
 	}
-	assert.equal(SEO_SCORE_VERSION, 22, "current rows use the current analyzer policy");
+	assert.equal(SEO_SCORE_VERSION, 24, "current rows use the current analyzer policy");
 	for (const id of ["keyword-repetition", "description-display-length", "title-display-length", "focus-keyword", "indexability", "schema", "content-depth", "sentence-readability", "paragraph-length"]) {
 		assert.ok(seen.has(id), "covered: " + id);
 	}

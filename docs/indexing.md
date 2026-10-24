@@ -35,6 +35,41 @@ deployment to finish. Coordinate publication and deployment so submitted
 addresses are available publicly. The CMS runtime must remain running to
 process its queue.
 
+## Enable IndexNow
+
+Set the website's public HTTPS root origin in the plugin's website settings
+and the host configuration. A custom port is not supported. Then open
+**SHIPIT SEO > Indexing > IndexNow** and select **Enable IndexNow**.
+
+With the plugin-owned key route, this action creates a key, serves its file,
+checks it at the public address and turns delivery on. No key needs to be
+copied. If an Astro site already serves the default `/indexnow-key.txt` file,
+first setup can read and reuse its valid key in one request when no key has
+been configured and IndexNow has never been activated. **Try again** can finish
+this automatic setup after a failed check.
+
+Setup preserves manually configured keys, custom key locations and keys from
+a previous activation. It does not overwrite site-owned files. The key is
+public proof that you control the site; it is not an account password or API
+credential.
+
+The public check requires HTTP 200, `text/plain`, and one valid UTF-8 key
+matching the saved setting. The file must be served directly without a
+redirect, sign-in or browser challenge. A failed first setup leaves delivery
+off and shows the failed step.
+
+| Failure | What to check |
+| --- | --- |
+| HTTP 403 | Check access or firewall rules for the exact public key-file path. The verifier must be able to read it without an admin session. |
+| HTTP 404 | Confirm that the deployed site serves the configured file through the Astro integration or its existing public route. |
+| Redirect | Serve the file directly at the configured address. |
+| Invalid response | Return only the key as UTF-8 plain text, no larger than 256 bytes. An HTML error or challenge page is not a key file. |
+| Mismatched key | Compare the saved key with the existing file and deliberately choose which to retain. Setup will not replace either to resolve a mismatch. |
+| Timeout or unreachable file | Check the production origin and the host's outbound network access before trying again. |
+
+Correct the reported problem, then select **Try again**. Automatic submission
+remains a separate control; first setup does not turn it on.
+
 ## Review submission history
 
 1. Open **SHIPIT SEO > Indexing > IndexNow > Submission history**.

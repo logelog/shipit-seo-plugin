@@ -88,6 +88,13 @@ const TIPTAP_BLOCK_TYPES = new Set([
 	"blockquote", "codeBlock", "horizontalRule", "hardBreak", "table", "tableRow", "tableCell", "tableHeader",
 ]);
 
+/** Node names understood by saved-body extraction; attributes are not nodes. */
+export function supportedSeoDocumentNode(value: Record<string, unknown>): boolean {
+ return typeof value._type === "string"
+  ? PORTABLE_TEXT_BLOCK_TYPES.has(value._type) || value._type === "span" || value._type === "link"
+  : typeof value.type === "string" && (TIPTAP_BLOCK_TYPES.has(value.type) || value.type === "doc" || value.type === "text" || value.type === "link");
+}
+
 export function extractSeoDocumentSignals(
 	document: unknown,
 	fallbackText = "",

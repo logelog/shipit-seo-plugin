@@ -23,6 +23,7 @@ import {
 	type SeoAdminIndexNowSubmission,
 } from "./admin-contract.ts";
 import {
+	INDEXNOW_DEFAULT_KEY_LOCATION,
 	INDEXNOW_ENDPOINT,
 	INDEXNOW_HISTORY_DETAIL_URL_BUDGET,
 	INDEXNOW_HISTORY_MAX_PAGE_SIZE,
@@ -49,6 +50,7 @@ import {
 	indexNowPublicOrigin,
 	indexNowRetryAt,
 	indexNowSetupIssue,
+	isValidIndexNowKey,
 	indexNowSubmissionReason,
 	indexNowSubmissionStatus,
 	normalizeIndexNowUrl,
@@ -78,11 +80,19 @@ const INDEXNOW_MAX_QUEUE_SCAN = 10_000;
 const INDEXNOW_HISTORY_STARTED_KEY = "state:indexnow-history-started-at";
 const INDEXNOW_HISTORY_PRUNE_BATCH = 25;
 
+export interface IndexNowPendingSetup {
+	siteOrigin: string;
+	apiKey: string;
+	keyLocation: typeof INDEXNOW_DEFAULT_KEY_LOCATION;
+}
+
 export interface StoredIndexNowSettings {
 	version: typeof SEO_ADMIN_INDEXNOW_STORAGE_VERSION;
 	updatedAt: string;
 	values: IndexNowSettingsValues;
 	verification?: IndexNowVerification;
+	/** Internal intent from setup, cleared by manual settings writes and activation. */
+	pendingSetup?: IndexNowPendingSetup;
 }
 
 export interface IndexNowUrlCandidate {
@@ -125,6 +135,18 @@ function cloneSettings(values: IndexNowSettingsValues): IndexNowSettingsValues {
 	return { ...values, autoSubmitContentTypes: values.autoSubmitContentTypes?.slice() ?? null };
 }
 
+function validPendingSetup(value: unknown, settings: IndexNowSettingsValues, hasVerification: boolean): value is IndexNowPendingSetup {
+	if (!value || typeof value !== "object" || Array.isArray(value) || settings.enabled || hasVerification) return false;
+	const pending = value as Partial<IndexNowPendingSetup>;
+	const keys = Object.keys(pending);
+	if (keys.length !== 3 || !keys.every((key) => ["siteOrigin", "apiKey", "keyLocation"].includes(key)) ||
+		typeof pending.siteOrigin !== "string" || typeof pending.apiKey !== "string" ||
+		!isValidIndexNowKey(pending.apiKey) || pending.apiKey !== settings.apiKey ||
+		pending.keyLocation !== INDEXNOW_DEFAULT_KEY_LOCATION || pending.keyLocation !== settings.keyLocation) return false;
+	const origin = indexNowPublicOrigin(pending.siteOrigin);
+	return origin.ready && origin.origin === pending.siteOrigin;
+}
+
 function storedSettings(value: unknown): StoredIndexNowSettings | null {
 	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 	const candidate = value as Partial<StoredIndexNowSettings>;
@@ -136,6 +158,11 @@ function storedSettings(value: unknown): StoredIndexNowSettings | null {
 		version: SEO_ADMIN_INDEXNOW_STORAGE_VERSION, updatedAt: candidate.updatedAt, values: validation.values,
 		...(candidate.verification && matchesIndexNowVerification(candidate.verification, validation.values, candidate.verification.siteOrigin)
 			? { verification: candidate.verification } : {}),
+		...(validPendingSetup(candidate.pendingSetup, validation.values, candidate.verification !== undefined)
+			? { pendingSetup: {
+				siteOrigin: candidate.pendingSetup.siteOrigin, apiKey: candidate.pendingSetup.apiKey,
+				keyLocation: candidate.pendingSetup.keyLocation,
+			} } : {}),
 	};
 }
 
@@ -196,6 +223,7 @@ export async function persistIndexNowSettings(
 	const validation = validateIndexNowSettings(values);
 	if (!validation.success) throw new Error("Cannot persist invalid IndexNow settings.");
 	const updatedAt = nextIndexNowSettingsUpdatedAt(previousUpdatedAt);
+	// Explicit settings writes supersede any generated-key setup intent.
 	const next: StoredIndexNowSettings = {
 		version: SEO_ADMIN_INDEXNOW_STORAGE_VERSION,
 		updatedAt,
@@ -282,6 +310,7 @@ async function updateIndexNowSettingsUnlocked(
 		const validation = validateIndexNowSettings(await update(current));
 		if (!validation.success) throw new Error("Cannot persist invalid IndexNow settings.");
 		const verification = snapshot.settings?.verification;
+		// Manual saves and key generation do not carry setup-only provenance.
 		const next: StoredIndexNowSettings = {
 			version: SEO_ADMIN_INDEXNOW_STORAGE_VERSION,
 			updatedAt: nextIndexNowSettingsUpdatedAt(current.updatedAt), values: validation.values,

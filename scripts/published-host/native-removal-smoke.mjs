@@ -80,6 +80,8 @@ function publicHead(html) {
 async function main() {
 	assert.equal(process.platform, "linux", "Run removal verification in WSL2 or Linux");
 	assert.equal(process.versions.node, "24.19.0");
+	const interfaces = readFileSync("/proc/net/dev", "utf8").trim().split("\n").slice(2).map((line) => line.split(":")[0].trim());
+	assert.deepEqual(interfaces, ["lo"], "Run removal verification in a loopback-only network namespace");
 	assert.equal(environment.target.name, "native-1.3.0");
 	environment.assertVersions();
 	const options = parseArgs(process.argv.slice(2));
@@ -146,7 +148,7 @@ async function main() {
 	async function run(command, args, label, { milliseconds = 180_000, guarded = false } = {}) {
 		const record = launch(command, args, label, guarded ? { NODE_OPTIONS: `--max-old-space-size=2048 --import=${guardPath}`, REMOVAL_GUARD_REPORT: guardReport, REMOVAL_GUARD_PHASE: label } : {});
 		const finished = await Promise.race([record.done.then(() => true), delay(milliseconds, undefined, { ref: false }).then(() => false)]);
-		if (!finished) { await stop(record); throw new Error(`${label} exceeded ${milliseconds} ms`); }
+		if (!finished) { await stop(record); throw new Error(`${label} exceeded ${milliseconds} ms: ${record.output.slice(-8192)}`); }
 		assert.equal(record.error, null, `${label}: ${record.error?.message}`);
 		assert.equal(record.code, 0, `${label} failed (${record.code ?? record.signal}): ${record.output.slice(-8192)}`);
 		return record.output.trim();

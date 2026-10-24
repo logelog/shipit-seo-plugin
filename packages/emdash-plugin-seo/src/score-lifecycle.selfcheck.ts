@@ -1,3 +1,4 @@
+import { bindContentAnalysis, checkContentAnalysisOptions } from "./content-body-mapping.ts";
 import assert from "node:assert/strict";
 
 import { SEO_SCORE_INPUT_IDENTITY_TAG } from "./admin-contract.ts";
@@ -929,6 +930,28 @@ const admittedManual = await runManualSavedScoreLifecycle(ctx, { collection: "po
 assert.deepEqual([admittedManual.status, admittedManual.status === "saved" && admittedManual.history, historyFor("manual-history-admitted").length], ["saved", "created", 1],
 	"already admitted automatic/history behavior is preserved");
 report.manualEntry = { states: ["absent", "pending", "paused"], optionalTouches, admittedHistory: "created" };
+
+// Build-time body mappings survive captured/replayed context facades and stale detection.
+entry("mapped-body", "rye");
+const mappedEntry = entries.get("mapped-body");
+mappedEntry.data.content = [{ _type: "prose_section", _version: 1, body: body("rye"), hidden: "Never count a configuration label" }];
+const mappedConfig = checkContentAnalysisOptions({ mappings: [{ collection: "posts", bodyField: "content", blocks: [
+ { type: "prose_section", version: 1, fields: [{ kind: "richText", path: ["body"] }] },
+] }] })!;
+bindContentAnalysis(ctx, mappedConfig);
+assert.equal((await run("mapped-body")).value.status, "saved");
+assert.equal(stored("mapped-body").metrics.wordCount, 100, "capture and replay retain the configured custom body");
+assert.equal(await verifyStoredScoreFreshness(ctx, stored("mapped-body")), "current");
+assert.equal((await run("mapped-body")).value.status, "reused");
+const mappedIdentity = stored("mapped-body").inputIdentity;
+bindContentAnalysis(ctx, checkContentAnalysisOptions({ mappings: [{ ...mappedConfig.mappings[0], blocks: [
+ { type: "prose_section", version: 1, fields: [] },
+] }] })!);
+assert.equal(await verifyStoredScoreFreshness(ctx, stored("mapped-body")), "stale", "only changing template mapping invalidates saved proof");
+assert.equal((await run("mapped-body")).value.status, "saved");
+assert.notEqual(stored("mapped-body").inputIdentity, mappedIdentity);
+assert.equal(stored("mapped-body").metrics.wordCount, 0, "explicitly unrendered body is not scored as text");
+report.bodyMapping = { capturedAndReplayed: true, changedMapping: "stale", unchangedMapping: "reused" };
 
 console.log(JSON.stringify({ check: "score-lifecycle", measured: report }));
 console.log("shipit-seo saved score lifecycle self-check passed");

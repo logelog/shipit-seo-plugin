@@ -4,7 +4,7 @@ Search and social metadata, content checks, structured data, Local SEO and
 indexing tools for native EmDash sites.
 
 <!-- compatibility:package:start -->
-Version `0.4.0-beta.56` is a native beta.
+Version `0.4.0-beta.57` is a native beta.
 
 Native EmDash/admin support: **1.3.1 or 1.3.0**.
 Use Node **24.19.0**, Astro **7.3.2** and SQLite.
@@ -20,13 +20,13 @@ Shipit runs in the trusted host process; it does not provide sandbox isolation.
 Use the package manager and lockfile your site already uses. For npm:
 
 ```sh
-npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.56
+npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.57
 ```
 
 For pnpm, use this instead:
 
 ```sh
-pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.56
+pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.57
 ```
 
 Import the wrapper in the existing Astro configuration:
@@ -120,15 +120,15 @@ policy. Unread evidence remains unassessed, and a result can show
 **Partially checked** or **Too little text to score** instead of a number.
 Noindex is reported separately from the score.
 
-Available in **0.4.0-beta.57 (unreleased)**: an unset focus keyword limits an
-otherwise available score to 79. Lower limits still apply, including 40 for
-Article bodies under 50 words and 70 for 50-599 words. These are checklist
+In **0.4.0-beta.57**, an unset focus keyword limits an otherwise available
+score to 79. Lower limits still apply, including 40 for Article bodies under
+50 words and 70 for 50-599 words. These are checklist
 rules, not search-engine requirements. See the [content checks guide](https://github.com/logelog/shipit-seo-plugin/blob/main/docs/content-checks.md)
 for score limits, missing evidence and deliberate result refreshes.
 
 ### Custom content blocks
 
-Available in **0.4.0-beta.57 (unreleased)**.
+The following configuration applies to **0.4.0-beta.57**.
 
 Standard Portable Text and Tiptap bodies are read automatically. A custom
 block needs a description of the fields its template actually displays.
@@ -294,9 +294,19 @@ Redirects remain EmDash-owned rules.
 ### IndexNow
 
 IndexNow starts off. It needs a public HTTPS root origin without a custom port.
-**Enable IndexNow** creates a public verification key and enables delivery only
-after the key file at `/indexnow-key.txt` matches. Resolve existing route/file
-ownership before enabling.
+Select **Enable IndexNow** to create a key, verify its public file and enable
+delivery in one action. When the plugin owns `/indexnow-key.txt`, it serves the
+file automatically. When no key has been configured, first Astro setup can
+reuse a valid key already served at that default path, without changing the
+site's file. **Try again** can finish this automatic setup after a failed check.
+
+Setup preserves manually configured keys, custom key locations and keys from
+a previous activation. The key is public proof of site ownership, not an
+account credential. If verification fails, delivery stays off for a new
+setup; the error identifies a blocked request, missing file, redirect, invalid
+plain-text response or mismatched key. See the
+[indexing guide](https://github.com/logelog/shipit-seo-plugin/blob/main/docs/indexing.md)
+for setup and troubleshooting.
 
 Automatic submission is a separate choice. Enabling delivery does not submit
 all content or enable automatic submission. Provider acceptance is not indexing,
