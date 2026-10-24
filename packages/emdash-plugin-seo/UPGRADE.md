@@ -99,10 +99,23 @@ and rehearsal.
 ## Scores and earlier evaluation builds
 
 The plugin and analyzer versions are part of saved-result identity. An upgrade
-does not reanalyze entries or backfill history. An earlier analyzer result
-stays stored without a current number or comparison; later explicit analysis
-starts current points. A resumed scan crossing an analyzer change pauses for
-policy review. Optional work remains subject to its existing activation.
+does not reanalyze entries, start a catch-up scan or backfill history. An earlier
+analyzer result stays stored without a current number or comparison. A resumed
+scan crossing an analyzer change pauses for policy review. Optional work
+remains subject to its existing activation.
+
+Available in **0.4.0-beta.57 (unreleased)**: analyzer 24 marks stored results
+from analyzer 23 and earlier **Earlier analyzer. Analyze again.** Opening an
+entry runs current basic browser checks, including the maximum of 79 without
+a focus keyword, without rewriting its saved result or history.
+
+To refresh a stored result deliberately, confirm its assessment profile, then
+choose **Analysis options > Saved analysis & history > Save analysis**. With
+automatic server analysis paused, this updates the current result without
+adding history. For several entries, review the scope and optional feature
+controls before starting a selected bulk run. See the
+[content checks guide](https://github.com/logelog/shipit-seo-plugin/blob/main/docs/content-checks.md) for the current score and
+body-reading rules.
 
 Keep these older-reader limits in mind when recovering an evaluation build:
 

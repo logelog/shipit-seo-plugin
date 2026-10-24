@@ -104,10 +104,10 @@ not a claim of complete white-label support.
 
 ### Basic editor checks
 
-Opening a saved page or post shows focus keywords, a search preview and browser
-checks without enabling server analysis. Posts default to Article checks;
-Pages and custom types use General content unless an assessment profile is
-saved. Change the choice in **Analysis options**.
+Opening a saved entry automatically runs basic browser checks and shows focus
+keywords and a search preview, even with optional server analysis off. Posts
+default to Article checks; Pages and custom types use General content unless
+an assessment profile is saved. Change the choice in **Analysis options**.
 
 Checks use the saved content snapshot and local keyword input, not unsaved
 body edits or the rendered page. They do not start a scan or store history.
@@ -119,6 +119,66 @@ keyword thresholds are editorial rules; General content has a short-page
 policy. Unread evidence remains unassessed, and a result can show
 **Partially checked** or **Too little text to score** instead of a number.
 Noindex is reported separately from the score.
+
+Available in **0.4.0-beta.57 (unreleased)**: an unset focus keyword limits an
+otherwise available score to 79. Lower limits still apply, including 40 for
+Article bodies under 50 words and 70 for 50-599 words. These are checklist
+rules, not search-engine requirements. See the [content checks guide](https://github.com/logelog/shipit-seo-plugin/blob/main/docs/content-checks.md)
+for score limits, missing evidence and deliberate result refreshes.
+
+### Custom content blocks
+
+Available in **0.4.0-beta.57 (unreleased)**.
+
+Standard Portable Text and Tiptap bodies are read automatically. A custom
+block needs a description of the fields its template actually displays.
+Configure `contentAnalysis` in the third argument of `shipitSeo()`:
+
+```ts
+shipitSeo(emdash, config, {
+  contentAnalysis: {
+    mappings: [{
+      collection: "pages",
+      bodyField: "content",
+      blocks: [{
+        type: "callout",
+        version: 1,
+        fields: [
+          { kind: "heading", path: ["heading"], level: 2 },
+          { kind: "richText", path: ["body"] },
+        ],
+      }],
+    }],
+  },
+})
+```
+
+This example reads `heading` and `body` only from saved `callout` blocks with
+`_version: 1`. It does not count IDs, colours, settings or other text fields.
+The same mapping runs for automatic editor checks and saved server analysis;
+opening an entry still needs no bulk-analysis activation or provider request.
+
+Use `text` for prose, `heading` with a level, and `richText` for a nested
+Portable Text or Tiptap document. A `group` with a path such as `["items", "*"]`
+visits repeater items in order; its `fields` use paths relative to each item.
+A `link` selects its visible label with `path` and its URL with `href`. An
+`image` selects its source with `path` and alt text with `alt`. URLs and image
+alt text do not become body prose. Composite repeater fields must be grouped
+so each label stays paired with its own URL or image.
+
+Mappings can be scoped to `slugs`. A block rule can use
+`when: { path: ["variant"], oneOf: ["detail"] }`; the first matching rule wins.
+An empty `fields` list explicitly excludes a block the template does not
+render. Top-level `fields` can describe visible entry fields outside the body.
+Keep these declarations aligned with template changes and block versions.
+They do not change the renderer, metadata or saved content.
+
+Unknown block versions, unread fields and exceeded extraction limits leave
+checks incomplete and withhold a numeric score. The plugin does not crawl the
+rendered page or guess which arbitrary strings are content. Shared navigation,
+transcluded entries and template-generated text are outside these saved-body
+checks. Changing a mapping makes saved results stale; it does not start a scan.
+
 
 ### SEO saves
 
