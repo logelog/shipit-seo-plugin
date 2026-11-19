@@ -1,3 +1,4 @@
+import { requireFullVerificationPlan } from "./verification-plan.mjs";
 // Native durable score scan proof on a migrated EmDash SQLite database from the
 // selected published host. Content, taxonomies and assignments come from the
 // host seed API; every scan call goes through the published HTTP dispatcher.
@@ -10,10 +11,7 @@ import { setFixtureContentAnalysis, setFixtureAssessmentProfile } from "./fixtur
 import { readFileSync, readdirSync } from "node:fs";
 import { hostPackageRoot, sourceRoot, target } from "./host-loader.mjs";
 
-if (!["native-1.1.0", "native-1.2.0", "native-1.3.0"].includes(target.name)) {
-	console.log(`Score scan lifecycle smoke skipped on ${target.name}; this check requires a released native target.`);
-	process.exit(0);
-}
+requireFullVerificationPlan(target.name);
 globalThis.fetch = async () => { throw new Error("External networking is disabled in this smoke check"); };
 
 const host = hostPackageRoot("emdash");

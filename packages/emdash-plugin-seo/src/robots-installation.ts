@@ -3,7 +3,7 @@
 // through the plugin descriptor options. Shipit SEO never serves the file.
 
 /** EmDash versions whose /robots.txt route this editor was verified against. */
-export const ROBOTS_NATIVE_HOST_VERSIONS: readonly string[] = ["1.1.0", "1.2.0", "1.3.0", "1.3.1"];
+export const ROBOTS_NATIVE_HOST_VERSIONS: readonly string[] = ["1.1.0", "1.2.0", "1.3.0", "1.3.1", "1.5.0"];
 
 export const ROBOTS_INSTALLATION_OWNERS = [
 	"emdash-core",

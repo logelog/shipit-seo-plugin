@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0-beta.58 (release candidate)
+
+- Add a pinned native EmDash/admin 1.5.0 target for SQLite consumers, including
+  route ownership, verification metadata and robots previews.
+- Display the observed robots.txt cache policy, including the staging
+  response on EmDash 1.5.0.
+- Run the full native checks only for explicitly registered targets.
+
 ## 0.4.0-beta.57
 
 - Keep scores below the Good band until a focus keyword is set. Missing

@@ -1,3 +1,4 @@
+import { requireFullVerificationPlan } from "./verification-plan.mjs";
 // Native metadata Templates proof on a migrated EmDash SQLite database from the
 // selected published host. Routes run behind the published HTTP dispatcher,
 // which checks the user, the CSRF header and the declared body limit before a
@@ -10,10 +11,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { hostPackageRoot, sourceRoot, target } from "./host-loader.mjs";
 
-if (!["native-1.1.0", "native-1.2.0", "native-1.3.0"].includes(target.name)) {
-	console.log(`Metadata templates smoke skipped on ${target.name}; this check requires a released native target.`);
-	process.exit(0);
-}
+requireFullVerificationPlan(target.name);
 let networkCalls = 0;
 globalThis.fetch = async () => {
 	networkCalls += 1;

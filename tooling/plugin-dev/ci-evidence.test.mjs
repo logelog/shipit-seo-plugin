@@ -40,6 +40,7 @@ function fixture(t, target = "native-1.3.0", { untracked = {}, ignored = [] } = 
     expectedPackages: packages("1.3.0"), sourceDirectories: ["src"], tasks,
     targets: {
       "native-1.3.0": { dependencyRoot: "candidate-1.3.0", host: host("1.3.0"), expectedPackages: packages("1.3.0") },
+      "native-1.5.0": { dependencyRoot: "candidate-1.5.0", host: host("1.5.0"), expectedPackages: packages("1.5.0") },
     },
   }));
   write("package.json", JSON.stringify({ private: true, packageManager: "pnpm@11.19.0" }));
@@ -50,6 +51,7 @@ function fixture(t, target = "native-1.3.0", { untracked = {}, ignored = [] } = 
   write("notes.md", "Tracked documentation outside the source fingerprint.\n");
   write("baseline/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
   write("candidate-1.3.0/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+  write("candidate-1.5.0/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
   git(root, ["init", "--quiet"]);
   git(root, ["config", "user.name", "Fixture"]);
   git(root, ["config", "user.email", "fixture@example.test"]);
@@ -89,7 +91,7 @@ function fixture(t, target = "native-1.3.0", { untracked = {}, ignored = [] } = 
 }
 
 test("each target exports a passed receipt only for its completed full run and tested package", async t => {
-  for (const target of ["default", "native-1.3.0"]) await t.test(target, t => {
+  for (const target of ["default", "native-1.3.0", "native-1.5.0"]) await t.test(target, t => {
     const f = fixture(t, target);
     f.finish();
     const evidence = f.collect();
@@ -100,12 +102,23 @@ test("each target exports a passed receipt only for its completed full run and t
     assert.deepEqual(evidence.package, tarball);
     assert.deepEqual(evidence.versions, f.report.versions);
     assert.deepEqual(evidence.packages, f.report.packages);
+    assert.equal(evidence.host.target, f.config.host.target);
     assert.equal(evidence.source.changed, false);
     assert.equal(main(["--target", target], f.root, f.context), 0);
     const saved = JSON.parse(readFileSync(path.join(f.root, "artifacts/plugin-dev", `${target}-ci-evidence.json`), "utf8"));
     assert.deepEqual(saved, evidence);
     assert.ok(Buffer.byteLength(JSON.stringify(saved)) < 64 * 1024);
   });
+});
+
+test("a full target cannot record a different configured host", t => {
+  const f = fixture(t, "native-1.5.0");
+  const file = path.join(f.root, "plugin-dev.json");
+  const config = JSON.parse(readFileSync(file, "utf8"));
+  config.targets["native-1.5.0"].host.target = "native-1.3.0";
+  f.write("plugin-dev.json", JSON.stringify(config));
+  assert.equal(recordPackedVerification(f.root, f.target, tarball, f.env()), null);
+  assert.notEqual(f.collect().status, "passed");
 });
 
 test("a run with a check that did not run never becomes a passing receipt", async t => {

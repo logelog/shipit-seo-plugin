@@ -1,3 +1,4 @@
+import { requireFullVerificationPlan } from "./verification-plan.mjs";
 // Native internal-link candidate source proof on a disposable in-memory
 // SQLite fixture. Statement and row counts are driver-returned values; they do
 // not measure physical reads, CPU or Cloudflare D1 cost, and Postgres or the
@@ -6,8 +7,9 @@ import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
 
 const args = process.argv.slice(2);
-assert.ok(args.length === 2 && args[0] === "--target" && ["native-1.1.0", "native-1.2.0", "native-1.3.0"].includes(args[1]),
-	"Usage: node scripts/published-host/internal-link-source-smoke.mjs --target native-1.1.0|native-1.2.0|native-1.3.0");
+assert.ok(args.length === 2 && args[0] === "--target" && typeof args[1] === "string",
+	"Usage: node scripts/published-host/internal-link-source-smoke.mjs --target NAME");
+requireFullVerificationPlan(args[1]);
 process.env.SHIPIT_HOST_TARGET = args[1];
 const { sourceRoot, target } = await import("./host-loader.mjs");
 assert.equal(target.name, args[1], "The loader must use the selected native dependency graph");

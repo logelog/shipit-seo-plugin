@@ -1,0 +1,38 @@
+---
+// Development fixture only: the theme resolves and explicitly binds an archive.
+import { getTerm } from "emdash";
+import { createPublicPageContext } from "emdash/page";
+import { EmDashHead, EmDashBodyStart, EmDashBodyEnd } from "emdash/ui";
+import { taxonomyArchivePage } from "@shipitseo/emdash-plugin-seo/taxonomy-archives";
+
+const SITE_LOCALE = "en";
+const { slug } = Astro.params;
+if (!slug) return new Response(null, { status: 404 });
+const term = await getTerm("category", slug, { locale: SITE_LOCALE, includeCounts: false });
+if (!term) return new Response(null, { status: 404 });
+const page = taxonomyArchivePage(createPublicPageContext({
+	Astro,
+	kind: "custom",
+	title: term.label,
+	description: term.description ?? null,
+	canonical: new URL(Astro.url.pathname, Astro.url.origin).href,
+	siteName: "Dev Site",
+}), term.name);
+---
+<!doctype html>
+<html lang={SITE_LOCALE}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<title>{term.label}</title>
+		<EmDashHead page={page} />
+	</head>
+	<body>
+		<EmDashBodyStart page={page} />
+		<main>
+			<h1>{term.label}</h1>
+			{term.description ? <p>{term.description}</p> : null}
+		</main>
+		<EmDashBodyEnd page={page} />
+	</body>
+</html>

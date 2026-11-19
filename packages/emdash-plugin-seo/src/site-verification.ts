@@ -44,7 +44,7 @@ function jsonIdentity(value: unknown): string | null {
 
 // EmDash 1.0.1 replaces the whole stored `seo` group on save, so a one-field
 // update there erases the other code and every neighbouring SEO setting.
-const VERIFICATION_MERGING_HOSTS: ReadonlySet<string> = new Set(["1.1.0", "1.2.0", "1.3.0", "1.3.1"]);
+const VERIFICATION_MERGING_HOSTS: ReadonlySet<string> = new Set(["1.1.0", "1.2.0", "1.3.0", "1.3.1", "1.5.0"]);
 
 /** The EmDash version in the admin manifest the host already loaded. Reading it sends nothing. */
 export function verificationHostVersion(manifest: unknown): string | null {

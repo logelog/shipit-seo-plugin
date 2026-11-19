@@ -1,4 +1,5 @@
 import { copyContentAnalysis } from "./content-body-mapping.ts";
+import { copySeoPublicUrls } from "./public-url-routing.ts";
 import type { PluginContext } from "emdash";
 
 import type { EntryAnalysisPurpose } from "./analysis-admission.ts";
@@ -422,6 +423,7 @@ class SavedEntryInputReads {
 			...(settings ? { settings } : {}),
 		} as unknown as PluginContext;
 		copyContentAnalysis(host, this.facade);
+		copySeoPublicUrls(host, this.facade);
 		return this.facade;
 	}
 }

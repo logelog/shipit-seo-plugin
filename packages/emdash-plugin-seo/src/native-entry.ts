@@ -98,6 +98,7 @@ export function createPlugin(options: SeoPluginOptions = {}): ResolvedPlugin {
 			scoreScan: nativeScoreScanHost(descriptor),
 			...(branding.kind === "configured" ? { branding: branding.branding } : {}),
 			...(options.installation?.contentAnalysis ? { contentAnalysis: options.installation.contentAnalysis } : {}),
+			...(options.installation?.publicUrls ? { publicUrls: options.installation.publicUrls } : {}),
 			internalLinks: createLinkNativeHostFactory({ openDatabase: hostDatabase }),
 			coexistence: createNativeCoexistenceHost({
 				openDatabase: hostDatabase,

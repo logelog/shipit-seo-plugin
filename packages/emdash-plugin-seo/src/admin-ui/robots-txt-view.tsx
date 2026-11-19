@@ -103,7 +103,7 @@ function ownerExplanation(owner: SeoRobotsTxtOwner, detail: string | null): stri
 		case "unsupported-routing":
 			return `This site is mounted under a base path${detail ? ` (${detail})` : ""}. Crawlers read robots.txt only at the root of a host, which EmDash's route does not serve here.`;
 		case "unsupported-host":
-			return `This editor supports EmDash 1.1.0, 1.2.0, 1.3.0 and 1.3.1${detail ? `; this site runs ${detail}` : ""}. Edit robots.txt in EmDash's settings.`;
+			return `This editor supports EmDash 1.1.0, 1.2.0, 1.3.0, 1.3.1 and 1.5.0${detail ? `; this site runs ${detail}` : ""}. Edit robots.txt in EmDash's settings.`;
 		case "not-served":
 			return "No route answers /robots.txt on this build, so saved text would not be served.";
 		case "not-installed":
@@ -644,9 +644,9 @@ export function RobotsTxtView() {
 						</details>
 					) : null}
 					<p className="shipit-seo-robots-note">
-						This check reads {requestOrigin}{ROBOTS_TXT_PATH} once from this browser without cookies. A saved setting is
-						not a verified live response. EmDash sends {ROBOTS_TXT_CACHE_CONTROL}, so browsers, CDNs and crawlers can
-						keep an older copy for up to a day.
+						This check reads {requestOrigin}{ROBOTS_TXT_PATH} once from this browser without cookies.
+						{observation.cacheControl === ROBOTS_TXT_CACHE_CONTROL ? " The observed response permits caching for up to a day." : null}
+						{observation.cacheControl === "no-store" ? " The observed response asks caches not to store this file." : null}
 						{publicOrigin && publicOrigin !== requestOrigin ? ` The public address ${publicOrigin}${ROBOTS_TXT_PATH} was not checked from here.` : ""}
 					</p>
 				</aside>

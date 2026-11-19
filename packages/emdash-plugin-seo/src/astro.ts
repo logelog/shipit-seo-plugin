@@ -10,6 +10,7 @@ import { SEO_ENGINE_PLUGIN_ID } from "./admin-contract.ts";
 import { SEO_BRAND_NAME_COMFORTABLE_LENGTH, seoBrandNameLength } from "./branding.ts";
 import { checkShipitSeoOptions, resolveSeoBranding, type ShipitSeoOptions } from "./branding-files.ts";
 import { checkContentAnalysisOptions } from "./content-body-mapping.ts";
+import { checkSeoPublicUrlOptions } from "./public-url-routing.ts";
 import { seoPlugin } from "./index.ts";
 import { classifyIndexNowSite, type IndexNowKeyRoute, type IndexNowSiteIssue } from "./indexnow.ts";
 import { listLlmsTxtDirectory } from "./llms-txt-files.ts";
@@ -69,6 +70,7 @@ const RESOLVED_LLMS_TXT_OWNER_MODULE = `\0${LLMS_TXT_OWNER_MODULE}`;
 
 export type { SeoContentAnalysisOptions, SeoBodyMapping, SeoBodyBlock, SeoBodyField } from "./content-body-mapping.ts";
 export type { ShipitSeoBranding, ShipitSeoOptions } from "./branding-files.ts";
+export type { SeoPublicUrlOptions, SeoPublicUrlRoute } from "./public-url-routing.ts";
 
 interface EmDashConfigShape {
 	plugins?: readonly unknown[];
@@ -226,6 +228,7 @@ export function shipitSeo<Config extends EmDashConfigShape>(
 	}
 	const brandingShape = checkShipitSeoOptions(options);
 	const contentAnalysis = checkContentAnalysisOptions(options?.contentAnalysis);
+	const publicUrls = checkSeoPublicUrlOptions(options?.publicUrls);
 	if (config.plugins !== undefined && !Array.isArray(config.plugins)) {
 		throw new Error("EmDash plugins must be a list.");
 	}
@@ -309,6 +312,7 @@ export function shipitSeo<Config extends EmDashConfigShape>(
 					}),
 				...(branding ? { branding } : {}),
 				...(contentAnalysis ? { contentAnalysis } : {}),
+				...(publicUrls ? { publicUrls } : {}),
 			},
 		};
 		Object.assign(descriptor, seoPlugin(installedOptions));
@@ -321,7 +325,7 @@ export function shipitSeo<Config extends EmDashConfigShape>(
 			logger.warn(`branding.name ${JSON.stringify(branding.name)} is longer than ${SEO_BRAND_NAME_COMFORTABLE_LENGTH} characters, so the workspace heading wraps and the admin menu may shorten it.`);
 		}
 		await setup(params);
-		if (emdashVersion === "1.3.0" || emdashVersion === "1.3.1") {
+		if (emdashVersion === "1.3.0" || emdashVersion === "1.3.1" || emdashVersion === "1.5.0") {
 			params.addMiddleware({ entrypoint: COEXISTENCE_MIDDLEWARE_ENTRYPOINT, order: "pre" });
 		}
 		// Added after EmDash's own `pre` middleware, so its runtime is initialized

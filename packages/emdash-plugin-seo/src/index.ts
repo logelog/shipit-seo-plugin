@@ -2,6 +2,7 @@
 // The native entry adapts the engine, but runs in the trusted host process.
 // Public metadata hooks return data; the host renders and escapes it.
 import type { PluginDescriptor } from "emdash";
+import { checkSeoPublicUrlOptions, type SeoPublicUrlOptions } from "./public-url-routing.ts";
 
 import { SEO_ENGINE_VERSION } from "./admin-contract.ts";
 import { checkContentAnalysisOptions, type SeoContentAnalysisOptions } from "./content-body-mapping.ts";
@@ -119,6 +120,7 @@ export interface SeoPluginInstallation {
 	/** Validated site branding; an unreadable value gives a neutral label and no logo, never an error. */
 	branding?: unknown;
 	contentAnalysis?: SeoContentAnalysisOptions;
+	publicUrls?: SeoPublicUrlOptions;
 }
 
 const SITE_ISSUES: readonly (IndexNowSiteIssue | null)[] = [null, "missing", "local", "not-https", "path", "port", "not-public"];
@@ -148,6 +150,7 @@ function validInstallation(value: unknown, siteUrl: string | undefined): SeoPlug
 		...(candidate.configuredPlugins !== undefined ? { configuredPlugins: candidate.configuredPlugins } : {}),
 		...(candidate.branding !== undefined ? { branding: candidate.branding } : {}),
 		...(candidate.contentAnalysis !== undefined ? { contentAnalysis: checkContentAnalysisOptions(candidate.contentAnalysis) } : {}),
+		...(candidate.publicUrls !== undefined ? { publicUrls: checkSeoPublicUrlOptions(candidate.publicUrls) } : {}),
 	};
 }
 

@@ -1,3 +1,4 @@
+import { requireFullVerificationPlan } from "./verification-plan.mjs";
 // Build and render the explicit taxonomy archive templates on released native
 // EmDash with a disposable SQLite file and the existing pinned dependency graph.
 // The same build renders an entry whose content type has a noindex rule.
@@ -114,9 +115,9 @@ async function seedDisposableDatabase(database) {
 
 async function main() {
 	assert.equal(process.platform, "linux", "Run the isolated native smoke in WSL2 or Linux");
-	assert.equal(environment.target.name, "native-1.3.0", "This HTML fixture requires the released native1.3 target");
+	requireFullVerificationPlan(environment.target.name);
 	assert.equal(process.versions.node, "24.19.0");
-	assert.deepEqual(process.argv.slice(2), [], "Select native1.3 through SHIPIT_HOST_TARGET; this smoke accepts no path overrides");
+	assert.deepEqual(process.argv.slice(2), [], "Select the native target through SHIPIT_HOST_TARGET; this smoke accepts no path overrides");
 	environment.assertVersions();
 	const hostManifest = readManifest(environment.hostRoot);
 	const coreManifest = readManifest(environment.hostPackageRoot("emdash"));

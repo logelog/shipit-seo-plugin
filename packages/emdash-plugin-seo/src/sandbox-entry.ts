@@ -19,6 +19,7 @@ import { bindCoexistenceHost, readCoexistenceInventory, coexistenceAdmission, ty
 // contributions only; JSON-LD is a plain object the host renders + escapes. Custom
 // schema is validated (validateCustomJsonLd) before storage AND before emission.
 import type { PluginContext, PublicPageContext } from "emdash";
+import { checkSeoPublicUrlOptions, copySeoPublicUrls, scopeSeoPublicUrlsContext, type SeoPublicUrlOptions } from "./public-url-routing.ts";
 import type { SandboxedPlugin } from "emdash/plugin";
 
 import {
@@ -2141,11 +2142,13 @@ function portabilityTrackingContext(
 			return typeof value === "function" ? value.bind(target) : value;
 		},
 	});
-	return {
+	const tracking = {
 		...ctx,
 		kv: trackedKv,
 		storage: { ...ctx.storage, schemas: trackedSchemas },
 	} as PluginContext;
+	copySeoPublicUrls(ctx, tracking);
+	return tracking;
 }
 
 async function verifyPortabilityWrites(
@@ -3189,12 +3192,9 @@ async function indexNowEventUrl(
 	item: any,
 	siteOrigin: string,
 ): Promise<string | null> {
-	const content = ctx.content as
-		| (PluginContentAccess & { getPublicUrl?: (collection: string, id: string) => Promise<string | null> })
-		| undefined;
-	if (!contentItemIsPublished(item) || typeof content?.getPublicUrl !== "function") return null;
+	if (!contentItemIsPublished(item)) return null;
 	try {
-		const url = await content.getPublicUrl(definition.collection, String(item.id));
+		const url = await publicUrlForContent(ctx, definition.collection, item);
 		return url ? normalizeIndexNowUrl(url, siteOrigin) : null;
 	} catch (error: unknown) {
 		ctx.log?.warn?.("seo:indexnow public URL lookup failed", {
@@ -5864,22 +5864,26 @@ export function createSeoEngine(
 		coexistence?: CoexistenceHost;
 		branding?: SeoInstalledBranding;
 		contentAnalysis?: SeoContentAnalysisOptions;
+		publicUrls?: SeoPublicUrlOptions;
 	} = {},
 ): typeof plugin {
-	if (installation.mode === "unknown" && !options.sitemap && !options.robots && !options.llmsTxt && !options.scoreScan && !options.internalLinks && !options.coexistence && !options.branding && !options.contentAnalysis) {
+	if (installation.mode === "unknown" && !options.sitemap && !options.robots && !options.llmsTxt && !options.scoreScan && !options.internalLinks && !options.coexistence && !options.branding && !options.contentAnalysis && !options.publicUrls) {
 		return plugin;
 	}
 	const contentAnalysis = checkContentAnalysisOptions(options.contentAnalysis);
+	const publicUrls = checkSeoPublicUrlOptions(options.publicUrls);
 	const bind = (handler: (...args: any[]) => any) => (first: unknown, ctx: unknown, ...rest: unknown[]) => {
 		if (ctx && typeof ctx === "object") {
-			if (installation.mode !== "unknown") indexNowInstallations.set(ctx, installation);
-			if (options.sitemap) sitemapHosts.set(ctx, options.sitemap);
-			if (options.robots) robotsInstallations.set(ctx, options.robots);
-			if (options.llmsTxt) llmsTxtInstallations.set(ctx, options.llmsTxt);
-			if (options.scoreScan) scoreScanHosts.set(ctx, options.scoreScan);
-			if (options.coexistence) bindCoexistenceHost(ctx, options.coexistence);
-			if (options.branding) brandingHosts.set(ctx, options.branding);
-			if (contentAnalysis) bindContentAnalysis(ctx, contentAnalysis);
+			const scoped = publicUrls ? scopeSeoPublicUrlsContext(ctx, publicUrls, installation.siteOrigin ?? installation.siteUrl) : ctx;
+			if (installation.mode !== "unknown") indexNowInstallations.set(scoped, installation);
+			if (options.sitemap) sitemapHosts.set(scoped, options.sitemap);
+			if (options.robots) robotsInstallations.set(scoped, options.robots);
+			if (options.llmsTxt) llmsTxtInstallations.set(scoped, options.llmsTxt);
+			if (options.scoreScan) scoreScanHosts.set(scoped, options.scoreScan);
+			if (options.coexistence) bindCoexistenceHost(scoped, options.coexistence);
+			if (options.branding) brandingHosts.set(scoped, options.branding);
+			if (contentAnalysis) bindContentAnalysis(scoped, contentAnalysis);
+			return handler(first, scoped, ...rest);
 		}
 		return handler(first, ctx, ...rest);
 	};

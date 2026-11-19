@@ -1,3 +1,4 @@
+import { requireFullVerificationPlan } from "./verification-plan.mjs";
 // First boot and reboot use the released runtime with its configured SQLite
 // factory. The harness supplies Astro's virtual config and production DEV flag;
 // it never injects a database or replaces the runtime's lifecycle ownership gate.
@@ -9,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { hostPackageRoot, sourceRoot, target } from "./host-loader.mjs";
+import { runtimeProductionSource } from "./runtime-production.mjs";
 
 const source = (path) => import(new URL(`packages/emdash-plugin-seo/src/${path}`, sourceRoot));
 const { createSeoEngine } = await source("sandbox-entry.ts");
@@ -115,8 +117,7 @@ async function bootConfiguredDatabase(file, fixture) {
 		...(fixture.configuredUrl ? { siteUrl: fixture.configuredUrl } : {}),
 	};
 	const runtimeExport = await hostDistExport("EmDashRuntime");
-	assert.equal((runtimeExport.contents.match(/import\.meta\.env\.DEV/g) ?? []).length, 1,
-		"the harness replaces only the released runtime's Astro production flag");
+	const productionSource = runtimeProductionSource(target.name, runtimeExport.contents);
 	const virtualConfig = `data:text/javascript,${encodeURIComponent(`export default ${JSON.stringify(config)};`)}`;
 	// Harness-only Astro inputs; the configured DB and lifecycle code run intact.
 	registerHooks({
@@ -126,7 +127,7 @@ async function bootConfiguredDatabase(file, fixture) {
 		load(url, context, nextLoad) {
 			const loaded = nextLoad(url, context);
 			if (url !== runtimeExport.url.href) return loaded;
-			return { ...loaded, source: runtimeExport.contents.replace("import.meta.env.DEV", "false") };
+			return { ...loaded, source: productionSource };
 		},
 	});
 	const EmDashRuntime = (await import(runtimeExport.url.href))[runtimeExport.alias];
@@ -165,7 +166,7 @@ async function bootConfiguredDatabase(file, fixture) {
 }
 
 if (process.argv[2] === "--boot") {
-	assert.ok(["native-1.2.0", "native-1.3.0"].includes(target.name));
+	requireFullVerificationPlan(target.name);
 	const result = await bootConfiguredDatabase(process.argv[3], JSON.parse(process.argv[4]));
 	console.log(`LIFECYCLE_RESULT ${JSON.stringify(result)}`);
 } else {
@@ -174,7 +175,7 @@ if (process.argv[2] === "--boot") {
 	if (process.argv[2] === "--pure") {
 		console.log(JSON.stringify({ target: target.name, pure, networkRequests }, null, 2));
 	} else {
-		assert.ok(["native-1.2.0", "native-1.3.0"].includes(target.name), "configured native lifecycle proof requires a supported full native target");
+		requireFullVerificationPlan(target.name);
 		const { Kysely } = await import("kysely");
 		const { createDialect } = await import("emdash/db/sqlite");
 		const { runMigrations } = await import("emdash/db");

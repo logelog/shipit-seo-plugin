@@ -1,3 +1,4 @@
+import { requireFullVerificationPlan } from "./verification-plan.mjs";
 // Native checklist evidence proof on a migrated EmDash SQLite database from the
 // selected published host. Session analysis and its cache-validation identity
 // run behind the published HTTP dispatcher, which checks the user and the CSRF
@@ -9,10 +10,7 @@ import { setFixtureContentAnalysis, setFixtureAssessmentProfile } from "./fixtur
 import { readFileSync, readdirSync } from "node:fs";
 import { hostPackageRoot, sourceRoot, target } from "./host-loader.mjs";
 
-if (!["native-1.1.0", "native-1.2.0", "native-1.3.0"].includes(target.name)) {
-	console.log(`Checklist evidence smoke skipped on ${target.name}; this check requires a released native target.`);
-	process.exit(0);
-}
+requireFullVerificationPlan(target.name);
 let fetchAttempts = 0;
 globalThis.fetch = async () => { fetchAttempts += 1; throw new Error("External networking is disabled in this smoke check"); };
 

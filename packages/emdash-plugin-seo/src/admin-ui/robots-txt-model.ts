@@ -22,6 +22,7 @@ const ROBOTS_SETTINGS_ROLE_GATES: Readonly<Record<string, { read: number; manage
 	"1.2.0": { read: 40, manage: 50 },
 	"1.3.0": { read: 40, manage: 50 },
 	"1.3.1": { read: 40, manage: 50 },
+	"1.5.0": { read: 40, manage: 50 },
 };
 
 export type RobotsRoleHint = "allowed" | "denied" | "unknown";
@@ -61,7 +62,7 @@ export interface RobotsSettingsSnapshot {
 	siteUrl: RobotsSiteUrl;
 	/** False when `seo` is present but not an object; core would merge a save into it. */
 	seoMergeable: boolean;
-	/** Core-owned setting; only exact 1.3.0 and 1.3.1 predictions apply it. */
+	/** Core-owned setting; only supported AI policy versions apply it. */
 	disallowAiTraining?: boolean;
 }
 

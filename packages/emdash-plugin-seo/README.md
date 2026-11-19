@@ -4,9 +4,9 @@ Search and social metadata, content checks, structured data, Local SEO and
 indexing tools for native EmDash sites.
 
 <!-- compatibility:package:start -->
-Version `0.4.0-beta.57` is a native beta.
+Version `0.4.0-beta.58` is a native beta.
 
-Native EmDash/admin support: **1.3.1 or 1.3.0**.
+Native EmDash/admin support: **1.5.0 or 1.3.1 or 1.3.0**.
 Use Node **24.19.0**, Astro **7.3.2** and SQLite.
 <!-- compatibility:package:end -->
 
@@ -20,13 +20,13 @@ Shipit runs in the trusted host process; it does not provide sandbox isolation.
 Use the package manager and lockfile your site already uses. For npm:
 
 ```sh
-npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.57
+npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.58
 ```
 
 For pnpm, use this instead:
 
 ```sh
-pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.57
+pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.58
 ```
 
 Import the wrapper in the existing Astro configuration:
@@ -55,6 +55,34 @@ See [installation](INSTALL-PROMPT.md) for template integration, public URL
 configuration and the first checks.
 
 ## Set up your site
+
+### Custom public routes
+
+A native site whose published URLs differ from EmDash's collection URL
+patterns can declare them in the wrapper's third argument:
+
+```js
+shipitSeo(emdash, options, {
+  publicUrls: {
+    routes: [
+      { collection: "posts", locale: "en", path: "/articles/{slug}" },
+      { collection: "pages", locale: "en", slug: "home", path: "/" },
+      { collection: "pages", locale: "fr", slug: "about", path: "/fr/a-propos" },
+    ],
+  },
+})
+```
+
+These declarations select saved-entry public addresses and automatic IndexNow
+URL candidates; they do not create routes, publish entries or enable delivery.
+Exact slug rules take precedence over a `{slug}` pattern. Optional `slugField`
+uses one saved data field, falling back to the native slug when it is empty.
+Declare every public locale and route for a selected collection: an unmatched
+locale or slug has no public URL. Collections without declarations retain the
+host's normal behavior. Hidden collections and unpublished entries keep their
+existing restrictions. The resolved absolute address must stay on Astro's
+configured site origin. The sitemap, robots and llms route ownership remains
+unchanged; existing site routes keep their output.
 
 1. In **Local SEO**, use **Edit website** to save the website name and production
    URL. Keep that address consistent with Astro's `site` and EmDash's Site URL
@@ -128,7 +156,7 @@ for score limits, missing evidence and deliberate result refreshes.
 
 ### Custom content blocks
 
-The following configuration applies to **0.4.0-beta.57**.
+The following configuration applies to **0.4.0-beta.58**.
 
 Standard Portable Text and Tiptap bodies are read automatically. A custom
 block needs a description of the fields its template actually displays.

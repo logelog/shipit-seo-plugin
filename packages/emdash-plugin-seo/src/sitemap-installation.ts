@@ -3,7 +3,7 @@
 import type { SitemapLocaleEntry, SitemapRouting } from "./sitemap-engine.ts";
 
 /** EmDash versions whose content and SEO schema the native source was verified against. */
-export const SITEMAP_NATIVE_HOST_VERSIONS: readonly string[] = ["1.1.0", "1.2.0", "1.3.0", "1.3.1"];
+export const SITEMAP_NATIVE_HOST_VERSIONS: readonly string[] = ["1.1.0", "1.2.0", "1.3.0", "1.3.1", "1.5.0"];
 
 export const SITEMAP_INSTALLATION_OWNERS = [
 	"shipit",

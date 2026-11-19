@@ -6,7 +6,7 @@ read [UPGRADE.md](UPGRADE.md); for removal, see
 [UNINSTALL-PROMPT.md](UNINSTALL-PROMPT.md).
 
 <!-- compatibility:support:start -->
-Native EmDash/admin support: **1.3.1 or 1.3.0**.
+Native EmDash/admin support: **1.5.0 or 1.3.1 or 1.3.0**.
 Use Node **24.19.0**, Astro **7.3.2** and SQLite.
 <!-- compatibility:support:end -->
 
@@ -36,13 +36,13 @@ See [the package limits](README.md#limits).
 For an npm site:
 
 ```sh
-npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.57
+npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.58
 ```
 
 For a pnpm site, use this instead:
 
 ```sh
-pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.57
+pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.58
 ```
 
 Use one package manager and one lockfile. Review the dependency changes;

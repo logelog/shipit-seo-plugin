@@ -3,9 +3,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ensureReports, readConfig, readRecordedReport, reportLabel, sourceFingerprint, writeReportJson } from "./cli.mjs";
 import { readCheckoutState, verificationState } from "./workspace-state.mjs";
+import { hasFullVerificationPlan } from "../../scripts/published-host/verification-plan.mjs";
 
 const LIMIT = 64 * 1024;
-const targets = new Set(["default", "native-1.3.0"]);
+const evidenceTarget = target => target === "default" || hasFullVerificationPlan(target);
 const outcomes = new Set(["success", "failure", "cancelled", "skipped"]);
 const checkStatuses = new Set(["passed", "failed", "timed_out", "signaled"]);
 const hostPackages = ["emdash", "@emdash-cms/admin", "astro"];
@@ -19,7 +20,7 @@ const timestamp = value => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2
   Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value;
 
 function selectedTarget(target) {
-  if (!targets.has(target)) throw new Error("Invalid evidence target.");
+  if (!evidenceTarget(target)) throw new Error("Invalid evidence target.");
   return target;
 }
 
@@ -41,8 +42,10 @@ function readRun(root, config) {
 }
 
 function hostMetadata(config, target) {
-  const expected = { target: "native-1.3.0", format: "native", runner: "node", storage: "sqlite" };
-  if (!isObject(config.host) || Object.entries(expected).some(([key, value]) => config.host[key] !== value)) {
+  const hostTarget = target === "default" ? config.host?.target : target;
+  const expected = { target: hostTarget, format: "native", runner: "node", storage: "sqlite" };
+  if (!hasFullVerificationPlan(hostTarget) || !isObject(config.host) ||
+      Object.entries(expected).some(([key, value]) => config.host[key] !== value)) {
     throw new Error("Invalid evidence host.");
   }
   return expected;
@@ -218,7 +221,7 @@ export function collectCiEvidence(root, target, context = {}) {
 }
 
 export function main(argv = process.argv.slice(2), root = process.cwd(), context = environmentContext(process.env)) {
-  if (argv.length !== 2 || argv[0] !== "--target" || !targets.has(argv[1])) throw new Error("Invalid evidence arguments.");
+  if (argv.length !== 2 || argv[0] !== "--target" || !evidenceTarget(argv[1])) throw new Error("Invalid evidence arguments.");
   const target = argv[1];
   const evidence = collectCiEvidence(root, target, context);
   writeEvidence(root, `${target}-ci-evidence.json`, evidence);

@@ -7,12 +7,14 @@ import { dirname, isAbsolute, join, relative } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { createEnvironment, runtimeExport } from "./environment.mjs";
+import { runtimeProductionSource } from "./runtime-production.mjs";
+import { hasFullVerificationPlan } from "./verification-plan.mjs";
 
 const [consumer, receiptFile, artifactJson] = process.argv.slice(2);
 assert.ok(consumer && isAbsolute(consumer) && receiptFile && isAbsolute(receiptFile),
 	"Usage: node indexnow-deadline-smoke.mjs ABSOLUTE_CONSUMER ABSOLUTE_RECEIPT ARTIFACT_JSON");
 const environment = createEnvironment(consumer);
-assert.ok(["native-1.2.0", "native-1.3.0"].includes(environment.target.name));
+assert.ok(environment.target.name === "native-1.2.0" || hasFullVerificationPlan(environment.target.name));
 for (const name of ["emdash", "@emdash-cms/admin"]) {
 	assert.equal(JSON.parse(readFileSync(new URL("package.json", environment.hostPackageRoot(name)), "utf8")).version, environment.target.versions.get(name));
 }
@@ -165,7 +167,7 @@ try {
 	assert.ok(realpathSync(packageRoot).startsWith(realpathSync(consumer) + "/"), "The package belongs to this consumer");
 	const config = { database: { entrypoint: "emdash/db/sqlite", config: { url: join(fixture, "deadline.sqlite") } }, siteUrl: SITE };
 	const runtimeInfo = await hostExport("EmDashRuntime");
-	assert.equal((runtimeInfo.source.match(/import\.meta\.env\.DEV/g) ?? []).length, 1);
+	const productionSource = runtimeProductionSource(environment.target.name, runtimeInfo.source);
 	const virtualConfig = "data:text/javascript," + encodeURIComponent("export default " + JSON.stringify(config) + ";");
 	registerHooks({
 		resolve(specifier, context, nextResolve) {
@@ -174,7 +176,7 @@ try {
 		load(url, context, nextLoad) {
 			const loaded = nextLoad(url, context);
 			return url === runtimeInfo.url.href
-				? { ...loaded, source: runtimeInfo.source.replace("import.meta.env.DEV", "false") }
+				? { ...loaded, source: productionSource }
 				: loaded;
 		},
 	});
