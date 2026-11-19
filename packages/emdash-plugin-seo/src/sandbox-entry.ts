@@ -2712,6 +2712,14 @@ async function resolveEffectivePageMetadata(
 				effective.canonical = effectiveField(page.canonical ?? "", "generated");
 				effective.vars.canonical = effective.canonical.value;
 			}
+			if (effective.image.source === "site-default") {
+				const card = clean(page.seo?.ogImage) ?? clean(page.image) ?? "";
+				const imageUrl = absoluteMetadataUrl(card, page.siteUrl || effective.vars.siteUrl);
+				if (isHttpUrl(imageUrl)) {
+					effective.image = effectiveField(imageUrl, "content");
+					effective.vars.image = imageUrl;
+				}
+			}
 			return effective;
 		}
 	}
