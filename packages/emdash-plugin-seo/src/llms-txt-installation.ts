@@ -4,7 +4,7 @@
 // page, public file, integration, route or redirect can answer it.
 
 /** EmDash versions whose middleware and public plugin dispatcher this adapter was verified against. */
-export const LLMS_TXT_NATIVE_HOST_VERSIONS: readonly string[] = ["1.1.0", "1.2.0", "1.3.0", "1.3.1"];
+export const LLMS_TXT_NATIVE_HOST_VERSIONS: readonly string[] = ["1.1.0", "1.2.0", "1.3.0", "1.3.1", "1.5.0"];
 
 export const LLMS_TXT_INSTALLATION_OWNERS = [
 	"shipit",

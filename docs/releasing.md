@@ -7,7 +7,7 @@ parts of a release.
 ## 1. Prepare the change
 
 <!-- compatibility:support:start -->
-Native EmDash/admin support: **1.3.1 or 1.3.0**.
+Native EmDash/admin support: **1.5.0 or 1.3.1 or 1.3.0**.
 Use Node **24.19.0**, Astro **7.3.2** and SQLite.
 <!-- compatibility:support:end -->
 
@@ -40,13 +40,12 @@ pnpm check:compatibility
 pnpm verify:quick
 ```
 
-Run an implemented full lane for release qualification. The current target
-does not implement full verification; see the
-[compatibility matrix](compatibility.md). The retained target's full lane is:
+Run the current native target's full lane for release qualification. The
+[compatibility matrix](compatibility.md) lists retained targets and their checks.
 
 ```sh
-pnpm verify --target native-1.3.0
-pnpm dev:report --target native-1.3.0
+pnpm verify --target native-1.5.0
+pnpm dev:report --target native-1.5.0
 ```
 
 Full verification installs packed consumers offline and requires a prepared

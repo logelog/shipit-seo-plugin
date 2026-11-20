@@ -149,7 +149,7 @@ try {
 		const rejectedOptions: Array<[unknown, RegExp]> = [
 			["Acme", /^Error: shipitSeo options must be an object/],
 			[[], /^Error: shipitSeo options must be an object/],
-			[{ brand: { name: "Acme" } }, /^Error: shipitSeo options: unknown option "brand"\. Use branding or contentAnalysis\.$/],
+			[{ brand: { name: "Acme" } }, /^Error: shipitSeo options: unknown option "brand"\. Use branding, contentAnalysis or publicUrls\.$/],
 			[{ branding: "Acme" }, /^Error: shipitSeo branding must be an object/],
 			[{ branding: { name: "Acme", color: "#fff" } }, /^Error: shipitSeo branding: unknown option "color"\. Use name, logo and logoDark\.$/],
 			[{ branding: { logo: "/logo.svg" } }, /^Error: shipitSeo branding\.name is required when branding is set\.$/],

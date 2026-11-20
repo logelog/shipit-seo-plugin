@@ -1,3 +1,4 @@
+import { requireFullVerificationPlan } from "./verification-plan.mjs";
 import { reviewOutputRoot } from "./environment.mjs";
 // Native robots.txt proof on a migrated EmDash SQLite database from the
 // selected published host. It drives EmDash's own settings endpoint and
@@ -5,14 +6,12 @@ import { reviewOutputRoot } from "./environment.mjs";
 // field-only writes, sibling preservation, the validator limit, effective
 // bodies, address order, fallbacks, last-writer-wins and a lost response.
 import assert from "node:assert/strict";
+import { registerHooks } from "node:module";
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { hostPackageRoot, sourceRoot, target } from "./host-loader.mjs";
 const reviewRoot = reviewOutputRoot(target);
 
-if (!["native-1.1.0", "native-1.2.0", "native-1.3.0"].includes(target.name)) {
-	console.log(`Robots smoke skipped on ${target.name}; this check requires a released native target.`);
-	process.exit(0);
-}
+requireFullVerificationPlan(target.name);
 globalThis.fetch = async () => { throw new Error("External networking is disabled in this smoke check"); };
 delete process.env.EMDASH_SITE_URL;
 delete process.env.SITE_URL;
@@ -30,7 +29,16 @@ const { Kysely } = await import("kysely");
 const { createDialect } = await import("emdash/db/sqlite");
 const { runMigrations } = await import("emdash/db");
 const settingsRoute = await import("emdash/internal/routes/api/settings");
-const robotsRoute = await import("emdash/internal/routes/robots.txt");
+// Astro provides BASE_URL to the route. Direct Node imports lack its Vite environment.
+const robotsUrl = import.meta.resolve("emdash/internal/routes/robots.txt");
+const astroEnvironment = registerHooks({
+	load(url, context, nextLoad) {
+		const loaded = nextLoad(url, context);
+		if (url !== robotsUrl) return loaded;
+		return { ...loaded, source: 'import.meta.env = { BASE_URL: "/" };\n' + loaded.source };
+	},
+});
+const robotsRoute = await import(robotsUrl).finally(() => astroEnvironment.deregister());
 const OptionsRepository = await hostDistExport("OptionsRepository");
 const source = (path) => import(new URL(`packages/emdash-plugin-seo/src/${path}`, sourceRoot));
 const { ROBOTS_TXT_CACHE_CONTROL, ROBOTS_TXT_CORE_FALLBACK_BODY, effectiveRobotsTxt, robotsTxtCodePoints, robotsTxtTooLong } = await source("robots-txt.ts");
@@ -303,6 +311,13 @@ try {
 	assert.equal(report.requests.robotsGet.writes, 0);
 	assert.equal(report.requests.settingsGet.writes, 0);
 
+	if (target.versions.get("emdash") === "1.5.0") {
+		assert.equal((await postSettings(users.admin, { staging: true })).status, 200);
+		assert.equal((await robots()).cacheControl, "no-store");
+		assert.equal((await postSettings(users.admin, { staging: false })).status, 200);
+		assert.equal((await robots()).cacheControl, ROBOTS_TXT_CACHE_CONTROL);
+		check("staging disables caching until the published mode is restored");
+	}
 	mkdirSync(new URL("robots-review/", reviewRoot), { recursive: true });
 	writeFileSync(new URL("robots-review/native-sql-smoke.json", reviewRoot), `${JSON.stringify(report, null, 2)}\n`);
 	console.log(`Native robots SQLite smoke passed: ${report.checks.length} checks; robots GET ${report.requests.robotsGet.queries} queries, settings GET ${report.requests.settingsGet.queries}, save ${report.requests.save.queries} queries with ${report.requests.save.writes} writes.`);

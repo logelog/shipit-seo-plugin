@@ -8,16 +8,25 @@ changing a host target does not rename the product or its analyzer.
 <!-- compatibility:matrix:start -->
 | Target | Role | EmDash | Admin | Implemented verification |
 | --- | --- | --- | --- | --- |
-| `native-1.3.1` | Current | 1.3.1 | 1.3.1 | quick |
+| `native-1.5.0` | Current | 1.5.0 | 1.5.0 | quick, full |
+| `native-1.3.1` | Retained | 1.3.1 | 1.3.1 | quick |
 | `native-1.3.0` | Retained | 1.3.0 | 1.3.0 | quick, full |
 
 Pinned toolchain: Node **24.19.0**, pnpm **11.19.0**, Astro **7.3.2**; native Node/SQLite only.
 
-`pnpm verify:quick` selects `native-1.3.1`.
-Full verification is available with `pnpm verify --target native-1.3.0` and its prepared offline npm cache.
-Read that target's report with `pnpm dev:report --target native-1.3.0`.
+`pnpm verify:quick` selects `native-1.5.0`.
+Full verification is available with `pnpm verify --target native-1.5.0` and its prepared offline npm cache.
+Read that target's report with `pnpm dev:report --target native-1.5.0`.
 A mode listed here describes the runner, not a passing test or release acceptance.
 <!-- compatibility:matrix:end -->
+
+Configured-runtime harnesses supply Astro's virtual configuration and reviewed
+production flags while leaving the published database and lifecycle code intact.
+The shared flag adapter refuses an unknown target or changed occurrence count.
+On 1.5.0, storage checks follow the host's registered physical index names,
+including hashed long names. The Social corruption fixture verifies that the
+indexed host rejects malformed JSON without changing the prior row; read-error
+and invalid-record refusal checks still run through the installed plugin API.
 
 ## Beta verification coverage
 
@@ -103,6 +112,10 @@ See the [indexing guide](indexing.md) for public-output and submission checks.
    verification modes. Keep existing fixture directories and their data separate.
    A new target must refuse a mode until the required checks are implemented;
    skipping those checks is not a successful verification.
+   Full verification also needs an explicit plan in
+   `scripts/published-host/verification-plan.mjs`. The compatibility checker and
+   synchronizer refuse a full declaration without that plan; the runner selects
+   its complete installed-package and SQLite checks before building the package.
 3. Select the new `currentTarget`. Retain older supported targets explicitly in
    `retainedTargets`, or remove support as an intentional release decision.
 4. Run `pnpm sync:compatibility` and `pnpm check:compatibility`. Review the resulting

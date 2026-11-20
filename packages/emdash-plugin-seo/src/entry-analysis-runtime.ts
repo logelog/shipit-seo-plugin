@@ -1,4 +1,5 @@
 import { bindContentAnalysis, bodyMappingRevision, contentAnalysisRevision, contentAnalysisOptions, contentBodyPlan, projectContentBody, type SeoContentAnalysisOptions } from "./content-body-mapping.ts";
+import { configuredSeoPublicUrl, hasSeoPublicUrlCollection, hasSeoPublicUrls } from "./public-url-routing.ts";
 // Saved-entry metadata resolution and disposable analysis shared by the native
 // engine and the registry panel bundle. The registry bundle imports this module
 // directly, so it must stay free of route wiring, zod and Node built-ins or the
@@ -235,14 +236,15 @@ export async function resolveContentCollectionSource(
 	const listCollections = discovery?.listCollections;
 	if (!discovery || typeof listCollections !== "function")
 		return { available: false, definitions: [] };
-	const cached = contentCollectionCache.get(discovery);
+	const cacheKey = hasSeoPublicUrls(ctx) ? ctx : discovery;
+	const cached = contentCollectionCache.get(cacheKey);
 	if (cached) return cached;
 	const pending = (async () => {
 		try {
 			const definitions = (await listCollections.call(discovery))
 				.filter(
 					(item) =>
-						isSeoContentCollectionKey(item.slug) && item.routable !== false && item.hidden !== true,
+						isSeoContentCollectionKey(item.slug) && (item.routable !== false || hasSeoPublicUrlCollection(ctx, item.slug)) && item.hidden !== true,
 				)
 				.map((item) => ({
 					collection: item.slug,
@@ -253,7 +255,7 @@ export async function resolveContentCollectionSource(
 					portableTextBodyField: singlePortableTextField(item.fields),
 					hasSeo: item.hasSeo !== false,
 					urlPattern: clean(item.urlPattern) ?? null,
-					routable: item.routable !== false,
+						routable: item.routable !== false || hasSeoPublicUrlCollection(ctx, item.slug),
 				}));
 			return { available: true, definitions };
 		} catch (error: unknown) {
@@ -261,13 +263,13 @@ export async function resolveContentCollectionSource(
 			return { available: false, definitions: [] };
 		}
 	})();
-	contentCollectionCache.set(discovery, pending);
+	contentCollectionCache.set(cacheKey, pending);
 	void pending.then((resolution) => {
-		if (!resolution.available && contentCollectionCache.get(discovery) === pending)
-			contentCollectionCache.delete(discovery);
+		if (!resolution.available && contentCollectionCache.get(cacheKey) === pending)
+			contentCollectionCache.delete(cacheKey);
 	}, () => {
-		if (contentCollectionCache.get(discovery) === pending)
-			contentCollectionCache.delete(discovery);
+		if (contentCollectionCache.get(cacheKey) === pending)
+			contentCollectionCache.delete(cacheKey);
 	});
 	return pending;
 }
@@ -2153,6 +2155,9 @@ export async function publicUrlForContent(
 		| (PluginContentAccess & { getPublicUrl?: (collection: string, id: string) => Promise<string | null> })
 		| undefined;
 	if (contentItemIsPublished(item) && !unsavedContentSnapshots.has(item)) {
+		if (!content) return "";
+		const configured = configuredSeoPublicUrl(ctx, collection, item);
+		if (configured !== undefined) return configured;
 		if (typeof content?.getPublicUrl !== "function") return "";
 		try {
 			const url = await content.getPublicUrl(collection, String(item.id));

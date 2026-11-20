@@ -1,3 +1,4 @@
+import { hasFullVerificationPlan, requireFullVerificationPlan } from "./verification-plan.mjs";
 import assert from "node:assert/strict";
 import { SEO_ADMIN_CONTRACT_VERSION } from "../../packages/emdash-plugin-seo/src/admin-contract.ts";
 import { readFileSync, readdirSync } from "node:fs";
@@ -32,6 +33,7 @@ async function hostDistExport(name) {
 	}
 	return null;
 }
+requireFullVerificationPlan(target.name);
 const syncDeclaredStorageIndexes = await hostDistExport("syncDeclaredStorageIndexes");
 const { Kysely, sql } = await import("kysely");
 const { createDialect } = await import("emdash/db/sqlite");
@@ -57,15 +59,27 @@ try {
 	});
 	const storage = seoPlugin().storage;
 	if (syncDeclaredStorageIndexes) {
-		await syncDeclaredStorageIndexes(db, [{ id: pluginId, storage }]);
-		const indexes = (await sql`select name from sqlite_master where type = 'index' and name like ${`idx_plugin_${pluginId}_indexnow%`}`.execute(db)).rows
-			.map((row) => row.name).sort();
+		const synced = await syncDeclaredStorageIndexes(db, [{ id: pluginId, storage }]);
+		if (target.name === "native-1.5.0") assert.deepEqual(synced, { ok: true, errors: [] });
+		const physical = (await sql`select name, sql from sqlite_master where type = 'index' and tbl_name = '_plugin_storage'`.execute(db)).rows;
+		const registered = await db.selectFrom("_plugin_indexes").selectAll().where("plugin_id", "=", pluginId).execute();
 		for (const expected of [
 			"indexnowSubmissions_status", "indexnowSubmissions_source", "indexnowSubmissions_detail",
 			"indexnowSubmissions_createdAt", "indexnowSubmissionUrls_submissionId", "indexnowJobs_status",
-		]) assert.ok(indexes.includes(`idx_plugin_${pluginId}_${expected}`), `the host creates the ${expected} index`);
+		]) {
+			if (target.name === "native-1.5.0") {
+				const [collection, field] = expected.split("_");
+				const tracked = registered.filter(row => row.collection === collection && JSON.stringify(JSON.parse(row.fields)) === JSON.stringify([field]));
+				assert.equal(tracked.length, 1, `the host tracks the ${expected} index`);
+				const actual = physical.find(row => row.name === tracked[0].index_name);
+				assert.ok(actual, `the host creates the ${expected} index under its registered name`);
+				assert.ok(actual.sql.includes(`$.${field}`), `the physical ${expected} index reads its declared JSON field`);
+			} else {
+				assert.ok(physical.some(row => row.name === `idx_plugin_${pluginId}_${expected}`), `the host creates the ${expected} index`);
+			}
+		}
 	} else {
-		assert.ok(!["native-1.1.0", "native-1.2.0", "native-1.3.0"].includes(target.name), "the native host must expose its storage index setup");
+		assert.ok(!hasFullVerificationPlan(target.name), "the native host must expose its storage index setup");
 	}
 	const ctx = factory.createContext({
 		id: pluginId, version: "0.0.0", capabilities: [],
@@ -429,7 +443,7 @@ async function redirectSmoke() {
 
 		const editGroups = [];
 		const editRequestStart = dispatcherRequests;
-		if (["native-1.1.0", "native-1.2.0", "native-1.3.0"].includes(target.name)) {
+		if (hasFullVerificationPlan(target.name)) {
 			const commands = { load: "admin-redirect-rule", update: "update-admin-redirect-rule", recover: "reconcile-admin-redirect-rule-update" };
 			const counts = { get: 0, list: 0, update: 0 };
 			const writes = [];
@@ -838,7 +852,7 @@ async function redirectSmoke() {
 				{ name: "reconcile-admin-redirect-rule-update", permission: "redirects:read", request: { body: "json", maxBytes: 98_304 } },
 			],
 		);
-		if (["native-1.1.0", "native-1.2.0", "native-1.3.0"].includes(target.name)) {
+		if (hasFullVerificationPlan(target.name)) {
 			editGroups.push("six extracted route permissions and request declarations");
 			console.log(`Redirect edit: ${editGroups.length} integrated groups and ${dispatcherRequests - editRequestStart} dispatcher requests finished on EmDash ${target.versions.get("emdash")} with in-memory SQLite; host internal SQL, public HTTP, UI, sandbox and Cloudflare remain separate checks.`);
 		}

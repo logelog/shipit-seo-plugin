@@ -1,3 +1,4 @@
+import { requireFullVerificationPlan } from "./verification-plan.mjs";
 // Exact-package Social checks use released runtime dispatch and disposable SQLite.
 // Faults are injected at the host repository boundary, never in product handlers.
 import assert from "node:assert/strict";
@@ -12,11 +13,12 @@ import dns from "node:dns";
 import { dirname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createEnvironment, runtimeExport, selectHostTarget } from "./environment.mjs";
+import { runtimeProductionSource } from "./runtime-production.mjs";
 
 const args = process.argv.slice(2);
 const options = {};
 for (let i = 0; i < args.length; i += 2) {
-	assert.ok(["--archive", "--receipt", "--mode", "--target"].includes(args[i]) && args[i + 1] && !options[args[i]], "Usage: social-save-recovery-smoke.mjs --archive ABSOLUTE_TGZ --receipt ABSOLUTE_JSON --mode beta5-red|green [--target native-1.2.0|native-1.3.0]");
+	assert.ok(["--archive", "--receipt", "--mode", "--target"].includes(args[i]) && args[i + 1] && !options[args[i]], "Usage: social-save-recovery-smoke.mjs --archive ABSOLUTE_TGZ --receipt ABSOLUTE_JSON --mode beta5-red|green [--target NAME]");
 	options[args[i]] = args[i + 1];
 }
 const archive = options["--archive"];
@@ -26,8 +28,8 @@ assert.ok(archive && isAbsolute(archive) && receiptFile && isAbsolute(receiptFil
 assert.ok(["beta5-red", "green"].includes(mode));
 assert.equal(process.platform, "linux");
 assert.equal(process.versions.node, "24.19.0");
-const environment = createEnvironment(undefined, selectHostTarget(options["--target"] ?? process.env.SHIPIT_HOST_TARGET ?? "native-1.2.0"));
-assert.ok(["native-1.2.0", "native-1.3.0"].includes(environment.target.name));
+const environment = createEnvironment(undefined, selectHostTarget(options["--target"] ?? process.env.SHIPIT_HOST_TARGET));
+requireFullVerificationPlan(environment.target.name);
 environment.assertVersions();
 const PLUGIN = "shipit-seo";
 const PACKAGE = "@shipitseo/emdash-plugin-seo";
@@ -113,13 +115,13 @@ try {
 	}
 	const config = { database: { entrypoint: "emdash/db/sqlite", config: { url: join(work, "social.sqlite") } }, siteUrl: SITE };
 	const runtimeInfo = await hostExport("EmDashRuntime");
-	assert.equal((runtimeInfo.source.match(/import\.meta\.env\.DEV/g) ?? []).length, 1);
+	const productionSource = runtimeProductionSource(environment.target.name, runtimeInfo.source);
 	const virtualConfig = "data:text/javascript," + encodeURIComponent("export default " + JSON.stringify(config) + ";");
 	registerHooks({
 		resolve(specifier, context, nextResolve) { return nextResolve(specifier === "virtual:emdash/config" ? virtualConfig : specifier, context); },
 		load(url, context, nextLoad) {
 			const loaded = nextLoad(url, context);
-			return url === runtimeInfo.url.href ? { ...loaded, source: runtimeInfo.source.replace("import.meta.env.DEV", "false") } : loaded;
+			return url === runtimeInfo.url.href ? { ...loaded, source: productionSource } : loaded;
 		},
 	});
 	const { createDialect } = await import(runtimeExport(environment, "emdash", "./db/sqlite").href);
@@ -481,13 +483,25 @@ try {
 		}
 		storageFault = null;
 		await arrange("Corrupt persistent record");
-		await runtime.db.updateTable("_plugin_storage").set({ data: "{not JSON" }).where("plugin_id", "=", PLUGIN).where("collection", "=", "socialOverrides").where("id", "=", ref).execute();
-		resetCounts();
-		const invalidJson = await read();
-		assert.equal(invalidJson.success, false);
-		assert.equal(invalidJson.error, "storage_unavailable");
-		assertBounded(1, 0);
-		record("stored-json-unreadable-is-not-absent", { error: invalidJson.error });
+		const corruptPersistentJson = () => runtime.db.updateTable("_plugin_storage").set({ data: "{not JSON" }).where("plugin_id", "=", PLUGIN).where("collection", "=", "socialOverrides").where("id", "=", ref).execute();
+		if (environment.target.name === "native-1.5.0") {
+			const before = await snapshot();
+			await assert.rejects(corruptPersistentJson, /malformed JSON/);
+			assert.deepEqual(await snapshot(), before, "the indexed host rejects corrupt JSON without changing the stored row");
+			resetCounts();
+			const current = await read();
+			assertSnapshot(current, before.value.title);
+			assertBounded(1, 0);
+			record("host-rejects-malformed-persistent-json", { preserved: true });
+		} else {
+			await corruptPersistentJson();
+			resetCounts();
+			const invalidJson = await read();
+			assert.equal(invalidJson.success, false);
+			assert.equal(invalidJson.error, "storage_unavailable");
+			assertBounded(1, 0);
+			record("stored-json-unreadable-is-not-absent", { error: invalidJson.error });
+		}
 		await originals.put.call(store, ref, { storageVersion: 1, ref: "posts:wrong-target", title: "Wrong identity", description: null, updatedAt: new Date().toISOString() });
 		resetCounts();
 		const invalidIdentity = await read();

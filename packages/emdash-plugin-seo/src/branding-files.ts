@@ -1,6 +1,7 @@
 // Build-time branding checks. They run only in the site's Astro config process
 // and read nothing outside the configured public directory.
 import { checkContentAnalysisOptions, type SeoContentAnalysisOptions } from "./content-body-mapping.ts";
+import { checkSeoPublicUrlOptions, type SeoPublicUrlOptions } from "./public-url-routing.ts";
 import { lstatSync, readFileSync, realpathSync, type Stats } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -30,6 +31,7 @@ export interface ShipitSeoBranding {
 export interface ShipitSeoOptions {
 	branding?: ShipitSeoBranding;
 	contentAnalysis?: SeoContentAnalysisOptions;
+	publicUrls?: SeoPublicUrlOptions;
 }
 
 export interface SeoBrandingShape {
@@ -63,9 +65,10 @@ export function checkShipitSeoOptions(options: unknown): SeoBrandingShape | null
 	if (!isPlainObject(options)) {
 		throw new Error('shipitSeo options must be an object such as { branding: { name: "Acme SEO" } }.');
 	}
-	const extra = unknownKeys(options, ["branding", "contentAnalysis"]);
-	if (extra.length) throw new Error(`shipitSeo options: unknown option ${shown(extra[0])}. Use branding or contentAnalysis.`);
+	const extra = unknownKeys(options, ["branding", "contentAnalysis", "publicUrls"]);
+	if (extra.length) throw new Error(`shipitSeo options: unknown option ${shown(extra[0])}. Use branding, contentAnalysis or publicUrls.`);
 	checkContentAnalysisOptions(options.contentAnalysis);
+	checkSeoPublicUrlOptions(options.publicUrls);
 	const branding = options.branding;
 	if (branding === undefined) return null;
 	if (!isPlainObject(branding)) {

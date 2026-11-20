@@ -1,3 +1,4 @@
+import { requireFullVerificationPlan } from "./verification-plan.mjs";
 // Content health readback proof on a migrated EmDash SQLite database from the
 // selected published host. Pages are scored by a durable scan through the
 // published HTTP dispatcher; the overview and stored-only score reads are then
@@ -10,10 +11,7 @@ import { createRequire } from "node:module";
 import { setFixtureContentAnalysis, setFixtureAssessmentProfile } from "./fixture-content-analysis.mjs";
 import { hostPackageRoot, sourceRoot, target } from "./host-loader.mjs";
 
-if (target.name !== "native-1.3.0") {
-	console.log(`Content health readback smoke skipped on ${target.name}; this check requires the native 1.3.0 target.`);
-	process.exit(0);
-}
+requireFullVerificationPlan(target.name);
 globalThis.fetch = async () => { throw new Error("External networking is disabled in this smoke check"); };
 
 const host = hostPackageRoot("emdash");

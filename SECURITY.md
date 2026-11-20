@@ -21,7 +21,7 @@ separate security backports. Reports affecting older versions are welcome,
 but the maintainer may ask you to check the latest beta.
 
 <!-- compatibility:support:start -->
-Native EmDash/admin support: **1.3.1 or 1.3.0**.
+Native EmDash/admin support: **1.5.0 or 1.3.1 or 1.3.0**.
 Use Node **24.19.0**, Astro **7.3.2** and SQLite.
 <!-- compatibility:support:end -->
 

@@ -1,9 +1,9 @@
 # Upgrade Shipit SEO
 
 <!-- compatibility:package:start -->
-Version `0.4.0-beta.57` is a native beta.
+Version `0.4.0-beta.58` is a native beta.
 
-Native EmDash/admin support: **1.3.1 or 1.3.0**.
+Native EmDash/admin support: **1.5.0 or 1.3.1 or 1.3.0**.
 Use Node **24.19.0**, Astro **7.3.2** and SQLite.
 <!-- compatibility:package:end -->
 
@@ -14,6 +14,10 @@ guarantee a safe downgrade. Keep host upgrades separate from plugin updates.
 Native updates use the site's package manager and a rebuild. EmDash's plugins
 manager can enable or disable the installed plugin, but does not update an
 npm-installed dependency. The beta channel moves; pin the selected version.
+
+EmDash/admin 1.5.0 uses `@cloudflare/kumo@2.15.0`. The retained 1.3.0
+and 1.3.1 hosts use Kumo 2.6.0. Keep the admin and UI library together
+when reviewing the consumer lockfile.
 
 ## Prepare and rehearse
 
@@ -40,13 +44,13 @@ an unreviewed compatibility mismatch.
 For a pnpm site:
 
 ```sh
-pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.57
+pnpm add --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.58
 ```
 
 For npm, use this instead; review the lifecycle limits below before proceeding:
 
 ```sh
-npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.57
+npm install --save-exact @shipitseo/emdash-plugin-seo@0.4.0-beta.58
 ```
 
 Keep one lockfile and review its diff. Retain the Astro wrapper, host adapter,

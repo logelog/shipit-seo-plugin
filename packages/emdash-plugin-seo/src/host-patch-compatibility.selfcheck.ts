@@ -6,7 +6,7 @@ import { verificationHostMerges } from "./site-verification.ts";
 import { effectiveRobotsTxt } from "./robots-txt.ts";
 import { robotsRoleHints } from "./admin-ui/robots-txt-model.ts";
 
-for (const version of ["1.3.0", "1.3.1"]) {
+for (const version of ["1.3.0", "1.3.1", "1.5.0"]) {
  const sitemap = { emdashVersion: version, pageEntries: [], publicFiles: [], integrations: ["emdash"] };
  assert.equal(classifySitemapInstallation(sitemap).owner, "shipit", `${version} supports native sitemap ownership`);
  assert.equal(classifySitemapInstallation({ ...sitemap, publicFiles: ["sitemap.xml"] }).owner, "static-file");
@@ -24,7 +24,7 @@ for (const version of ["1.3.0", "1.3.1"]) {
    effectiveRobotsTxt(stored, "https://example.com", { hostVersion: "1.3.0", disallowAiTraining: true }).body);
  }
 }
-for (const version of ["1.3.2", "1.3.1-rc.1", "1.4.0", null]) {
+for (const version of ["1.3.2", "1.3.1-rc.1", "1.4.0", "1.5.1", null]) {
  assert.equal(classifySitemapInstallation({ emdashVersion: version, pageEntries: [], publicFiles: [], integrations: [] }).owner, "unsupported-host");
  assert.equal(verificationHostMerges(version), false);
  assert.deepEqual(robotsRoleHints(version, { status: "success", role: 50 }), { read: "unknown", manage: "unknown" });

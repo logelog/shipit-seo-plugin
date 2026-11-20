@@ -105,7 +105,7 @@ export interface RobotsEffectiveFile {
 	stored: string;
 	/** Trailing part core adds; empty when the stored text is served verbatim. */
 	added: string;
-	/** Applied only by the verified 1.3.0 and 1.3.1 routes, from its core-owned setting. */
+	/** Applied only by the supported routes with the AI training policy, from its core-owned setting. */
 	disallowAiTraining: boolean;
 }
 
@@ -122,7 +122,7 @@ export function effectiveRobotsTxt(
 	sitemapBase: string,
 	policy: RobotsCorePolicy = {},
 ): RobotsEffectiveFile {
-	const disallowAiTraining = (policy.hostVersion === "1.3.0" || policy.hostVersion === "1.3.1") && policy.disallowAiTraining === true;
+	const disallowAiTraining = (policy.hostVersion === "1.3.0" || policy.hostVersion === "1.3.1" || policy.hostVersion === "1.5.0") && policy.disallowAiTraining === true;
 	const sitemapUrl = robotsSitemapUrl(sitemapBase);
 	if (!stored) {
 		const body = [

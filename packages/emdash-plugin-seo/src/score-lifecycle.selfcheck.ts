@@ -1,10 +1,11 @@
 import { bindContentAnalysis, checkContentAnalysisOptions } from "./content-body-mapping.ts";
+import { checkSeoPublicUrlOptions, scopeSeoPublicUrlsContext } from "./public-url-routing.ts";
 import assert from "node:assert/strict";
 
 import { SEO_SCORE_INPUT_IDENTITY_TAG } from "./admin-contract.ts";
 import { savedContentVersion } from "./admin-ui/saved-content-snapshot.ts";
 import { LEGACY_TEMPLATE_REVISIONS_KEY, METADATA_TEMPLATES_KEY } from "./metadata-templates.ts";
-import { readAdminTemplates, readStoredScoreSnapshot } from "./entry-analysis-runtime.ts";
+import { publicUrlForContent, readAdminTemplates, readStoredScoreSnapshot } from "./entry-analysis-runtime.ts";
 import {
 	canonicalJson,
 	runManualSavedScoreLifecycle,
@@ -952,6 +953,32 @@ assert.equal((await run("mapped-body")).value.status, "saved");
 assert.notEqual(stored("mapped-body").inputIdentity, mappedIdentity);
 assert.equal(stored("mapped-body").metrics.wordCount, 0, "explicitly unrendered body is not scored as text");
 report.bodyMapping = { capturedAndReplayed: true, changedMapping: "stale", unchangedMapping: "reused" };
+
+entry("mapped-route", "rye");
+const routed = (path: string, extra: unknown[] = []) => scopeSeoPublicUrlsContext(ctx, checkSeoPublicUrlOptions({ routes: [
+	{ collection: "posts", locale: "en", path }, ...extra,
+] })!, "https://example.com") as any;
+const routedContext = routed("/articles/{slug}");
+let replayedPublicUrl = "";
+const routedResult = await runSavedScoreLifecycle(routedContext, { collection: "posts", id: "mapped-route", locale: "en" }, {
+	analyze: async (captured, revision) => {
+		const inputs = captured as any;
+		replayedPublicUrl = await publicUrlForContent(inputs.reads.replay().context(), "posts", inputs.hydrated);
+		return savedScoreLifecycleSteps.analyze(captured, revision);
+	},
+});
+assert.equal(routedResult.status, "saved");
+assert.equal(replayedPublicUrl, "https://example.com/articles/mapped-route-loaf", "saved capture and replay retain the native route binding");
+assert.equal(await verifyStoredScoreFreshness(routedContext, stored("mapped-route")), "current");
+assert.equal(await verifyStoredScoreFreshness(routed("/news/{slug}"), stored("mapped-route")), "stale", "a changed selected URL invalidates saved analysis");
+assert.equal(await verifyStoredScoreFreshness(routed("/articles/{slug}", [
+	{ collection: "pages", locale: "en", slug: "home", path: "/" },
+	{ collection: "posts", locale: "en", slug: "another-entry", path: "/another-entry" },
+]), stored("mapped-route")), "current", "unrelated route declarations do not invalidate saved analysis");
+assert.equal(await verifyStoredScoreFreshness(routed("/articles/{slug}", [
+	{ collection: "posts", locale: "en", slug: "mapped-route-loaf", path: "/articles/mapped-route-loaf" },
+]), stored("mapped-route")), "current", "an equivalent selected route keeps saved analysis current");
+report.publicUrls = { capturedAndReplayed: true, changedUrl: "stale", unrelatedRules: "current" };
 
 console.log(JSON.stringify({ check: "score-lifecycle", measured: report }));
 console.log("shipit-seo saved score lifecycle self-check passed");

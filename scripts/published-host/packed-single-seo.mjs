@@ -1,3 +1,4 @@
+import { hasFullVerificationPlan, requireFullVerificationPlan } from "./verification-plan.mjs";
 import assert from "node:assert/strict";
 import { SEO_ADMIN_CONTRACT_VERSION } from "../../packages/emdash-plugin-seo/src/admin-contract.ts";
 import { createHash, randomBytes } from "node:crypto";
@@ -16,13 +17,14 @@ import { recordPackedVerification } from "../../tooling/plugin-dev/ci-evidence.m
 import { assertPackedArtifact } from "../../packages/emdash-plugin-seo/scripts/packed-artifact.mjs";
 
 const environment = createEnvironment();
+requireFullVerificationPlan(environment.target.name);
 environment.assertVersions();
 const reviewRoot = reviewOutputRoot(environment.target);
 const hostManifest = JSON.parse(readFileSync(new URL("package.json", environment.hostRoot), "utf8"));
 const packageManagerVersion = /^pnpm@(\d+\.\d+\.\d+)(?:\+.*)?$/.exec(hostManifest.packageManager ?? "")?.[1];
 if (!packageManagerVersion) throw new Error("Packed consumer requires an exact pnpm version");
-const nativeConsumer = ["native-1.1.0", "native-1.2.0", "native-1.3.0"].includes(environment.target.name);
-const fullNativeConsumer = ["native-1.2.0", "native-1.3.0"].includes(environment.target.name);
+const nativeConsumer = hasFullVerificationPlan(environment.target.name);
+const fullNativeConsumer = hasFullVerificationPlan(environment.target.name);
 const indexNowDeadlineSmoke = process.env.SHIPIT_INDEXNOW_DEADLINE_SMOKE === "1";
 if (indexNowDeadlineSmoke && !fullNativeConsumer) throw new Error("The IndexNow deadline fixture requires a supported full native target");
 const npmConsumer = process.env.SHIPIT_PACKED_CONSUMER === "npm";
@@ -1368,7 +1370,7 @@ export default defineConfig({
   devToolbar: { enabled: false },
   adapter: node({ mode: "standalone" }),
   integrations: ${nativeConsumer
-    ? `[react(), shipitSeo(emdash, { database: sqlite({ url: "file:./smoke.sqlite" }) })]`
+    ? `[react(), shipitSeo(emdash, { ${environment.target.name === "native-1.5.0" ? "fonts: false, " : ""}database: sqlite({ url: "file:./smoke.sqlite" }) })]`
     : `[react(), seoIndexNow(), emdash({
     database: sqlite({ url: "file:./smoke.sqlite" }),
     plugins: [seoPlugin()],
@@ -1417,8 +1419,8 @@ assert.equal(middleware.filter(isSitemapMiddleware).length, 1, "the packed entry
 assert.equal(middleware.filter(isLlmsMiddleware).length, 1, "the packed entry point adds the llms.txt middleware once");
 const coexistenceEntry = realpathSync(fileURLToPath(new URL("node_modules/@shipitseo/emdash-plugin-seo/dist/plugin-coexistence-middleware-entry.js", root)));
 const isCoexistenceMiddleware = (entry) => entry.entrypoint instanceof URL && realpathSync(fileURLToPath(entry.entrypoint)) === coexistenceEntry;
-assert.equal(middleware.filter(isCoexistenceMiddleware).length, ${environment.target.versions.get("emdash") === "1.3.0" ? 1 : 0});
-if (${environment.target.versions.get("emdash") === "1.3.0"}) {
+assert.equal(middleware.filter(isCoexistenceMiddleware).length, ${fullNativeConsumer ? 1 : 0});
+if (${fullNativeConsumer}) {
   assert.ok(middleware.findIndex(isCoexistenceMiddleware) > 0, "metadata finalization follows EmDash initialization");
   assert.ok(middleware.findIndex(isCoexistenceMiddleware) < middleware.findIndex(isSitemapMiddleware));
 }

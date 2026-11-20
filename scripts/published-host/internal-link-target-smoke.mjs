@@ -1,3 +1,4 @@
+import { requireFullVerificationPlan } from "./verification-plan.mjs";
 // Native exact-target proof on one disposable, migrated SQLite connection.
 // Driver statements and returned rows include the SDK's full-row URL read;
 // they do not establish physical reads, CPU, D1, Postgres or sandbox cost.
@@ -5,8 +6,9 @@ import assert from "node:assert/strict";
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 
 const args = process.argv.slice(2);
-assert.ok(args.length === 2 && args[0] === "--target" && ["native-1.1.0", "native-1.2.0", "native-1.3.0"].includes(args[1]),
-	"Usage: node scripts/published-host/internal-link-target-smoke.mjs --target native-1.1.0|native-1.2.0|native-1.3.0");
+assert.ok(args.length === 2 && args[0] === "--target" && typeof args[1] === "string",
+	"Usage: node scripts/published-host/internal-link-target-smoke.mjs --target NAME");
+requireFullVerificationPlan(args[1]);
 process.env.SHIPIT_HOST_TARGET = args[1];
 const { hostPackageRoot, sourceRoot, target } = await import("./host-loader.mjs");
 assert.equal(target.name, args[1]);

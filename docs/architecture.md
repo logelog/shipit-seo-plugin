@@ -6,12 +6,12 @@ integration. It does not provide sandbox isolation or replace the site's
 adapter, database or templates.
 
 <!-- compatibility:development:start -->
-The default development target is **native-1.3.1** (EmDash/admin 1.3.1).
+The default development target is **native-1.5.0** (EmDash/admin 1.5.0).
 Use Node **24.19.0**, pnpm **11.19.0**, Astro **7.3.2** and SQLite.
-The fixture is `integration/emdash/published-host-1.3.1`.
+The fixture is `integration/emdash/published-host-1.5.0`.
 
-Retained native targets: `native-1.3.0`.
-The current target implements quick verification; full verification is not implemented for this target.
+Retained native targets: `native-1.3.1`, `native-1.3.0`.
+The current target implements quick and full verification.
 <!-- compatibility:development:end -->
 
 ## Source map
@@ -83,6 +83,13 @@ The runtime combines the site's settings and current entry with the host page
 context. The theme owns its title, templates and route registration. Shipit
 adds metadata, structured data and public-file contributions only within
 their respective ownership rules.
+
+An opt-in native `publicUrls` declaration maps saved-entry identities and
+locales to existing site routes. Each engine invocation binds its own immutable
+rules and origin to a derived context. Saved-entry resolution and automatic
+IndexNow candidate selection share the resolver. Unmatched configured routes
+fail closed; other collections and draft previews retain host behavior.
+These declarations do not register routes, change content or enable delivery.
 
 Site-wide and content-type restrictions only add noindex. Taxonomy archive
 rules require an explicit template binding and do not alter assigned posts.

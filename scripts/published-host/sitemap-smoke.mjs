@@ -1,3 +1,4 @@
+import { requireFullVerificationPlan } from "./verification-plan.mjs";
 import { reviewOutputRoot } from "./environment.mjs";
 // Native sitemap proof on a migrated EmDash SQLite database from the selected
 // published host: projected reads, keyset files, parameter budgets, route
@@ -8,10 +9,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { hostPackageRoot, sourceRoot, target } from "./host-loader.mjs";
 const reviewRoot = reviewOutputRoot(target);
 
-if (!["native-1.1.0", "native-1.2.0", "native-1.3.0"].includes(target.name)) {
-	console.log(`Sitemap smoke skipped on ${target.name}; this check requires a released native target.`);
-	process.exit(0);
-}
+requireFullVerificationPlan(target.name);
 globalThis.fetch = async () => { throw new Error("External networking is disabled in this smoke check"); };
 
 const host = hostPackageRoot("emdash");

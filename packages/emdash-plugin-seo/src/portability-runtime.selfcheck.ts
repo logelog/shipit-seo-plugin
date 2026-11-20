@@ -5,7 +5,7 @@ import {
 	SEO_PORTABILITY_VERSION,
 	type SeoPortabilityBundle,
 } from "./admin-contract.ts";
-import seoRuntime from "./sandbox-entry.ts";
+import seoRuntime, { createSeoEngine } from "./sandbox-entry.ts";
 import { collectionAnalysisProfileKey, readCollectionAnalysisProfile } from "./collection-analysis-profile.ts";
 import { readContentScoringPolicy } from "./settings-runtime.ts";
 import { defaultSettingsValues } from "./settings-state.ts";
@@ -1227,6 +1227,19 @@ check("an unconfirmed schema write restores raw purposes without claiming full r
 check("failed import restores the prior local activation acknowledgement",
 	(await readContentScoringPolicy(failedProfileTarget.context as any)).state === "enabled" &&
 		(failedProfileTarget.kv.get("settings:global:v1") as any)?.contentScoringResourceNoticeVersion === 1);
+
+const routedHarness = createContext();
+const routedEngine = createSeoEngine({ mode: "astro", siteUrl: "https://target.example", siteOrigin: "https://target.example", siteIssue: null, keyRoute: "existing" }, {
+	publicUrls: { routes: [{ collection: "posts", locale: "nl", path: "/blog/{slug}" }] },
+});
+const routedHandler = (name: string) => (routedEngine.routes as any)[name].handler;
+const routedExport = await routedHandler("admin-portability-export")(route(), routedHarness.context);
+const routedBundle = structuredClone(routedExport.bundle);
+routedBundle.configuration.indexNow.minIntervalSeconds += 1;
+const routedPreview = await routedHandler("admin-portability-preview")(route({ bundle: routedBundle, mode: "merge" }), routedHarness.context);
+const routedApply = await routedHandler("admin-portability-apply")(route({ bundle: routedBundle, mode: "merge", confirmation: SEO_PORTABILITY_CONFIRMATION, planFingerprint: routedPreview.plan?.fingerprint }), routedHarness.context);
+check("configured native routes preserve all APIs through guarded portability writes", routedApply.success === true &&
+	(routedHarness.kv.get(`settings:indexnow:v${SEO_ADMIN_INDEXNOW_STORAGE_VERSION}`) as any)?.values.minIntervalSeconds === routedBundle.configuration.indexNow.minIntervalSeconds);
 
 if (failures) {
 	console.error(`\n${failures} SEO portability runtime self-check(s) failed.`);

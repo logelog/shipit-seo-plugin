@@ -10,6 +10,25 @@ import { compatibilityCli, compatibilityRoot, expectedPackagePins, hostPeerRange
 import { checkCompatibility, checkDevelopmentCompatibility, checkFixtureCompatibility, compatibilityUpdates,
   managedDocuments, renderCompatibilityBlock, replaceCompatibilityBlock, writeCompatibilityUpdates } from "./sync-compatibility.mjs";
 import { runtimeHostGateFiles, runtimeHostSupportErrors } from "./runtime-host-compatibility.mjs";
+import { fullVerificationPlan, verificationImplementationErrors } from "./published-host/verification-plan.mjs";
+import { runtimeProductionSource } from "./published-host/runtime-production.mjs";
+
+test("production runtime input preserves code outside the reviewed Astro flags", () => {
+  const source = "const untouched = import.meta.env.OTHER; if (import.meta.env.DEV) development();";
+  for (const target of ["native-1.2.0", "native-1.3.0"]) {
+    assert.equal(runtimeProductionSource(target, source), source.replace("import.meta.env.DEV", "false"));
+  }
+  const current = source + "\nif (import.meta.env.DEV) workerDevelopmentLimit();";
+  assert.equal(runtimeProductionSource("native-1.5.0", current), current.replaceAll("import.meta.env.DEV", "false"));
+});
+
+test("production runtime input rejects changed source contracts and unreviewed targets", () => {
+  const one = "if (import.meta.env.DEV) development();";
+  assert.throws(() => runtimeProductionSource("native-future", one), /reviewed Astro production flag count/);
+  assert.throws(() => runtimeProductionSource("native-1.5.0", one), /reviewed Astro production flags/);
+  assert.throws(() => runtimeProductionSource("native-1.5.0", one.repeat(3)), /reviewed Astro production flags/);
+  assert.throws(() => runtimeProductionSource("native-1.3.0", "no production input"), /reviewed Astro production flags/);
+});
 
 const hash = value => createHash("sha256").update(value).digest("hex");
 const initial = () => ({
@@ -96,6 +115,42 @@ test("pending lock hashes cannot produce CI metadata", t => {
   assert.throws(() => compatibilityCli(["--ci-json"], root), /not reviewed/);
   assert.match(checkFixtureCompatibility(root).join("\n"), /pending review/);
   assert.equal(compatibilityCli(["--field", "currentTarget"], root), "native-1.3.1");
+});
+
+test("full verification cannot be advertised by changing policy alone", async t => {
+  const { root, write, policy } = fixture(t);
+  assert.deepEqual(verificationImplementationErrors(policy), []);
+  policy.targets[policy.currentTarget].verifyModes.push("full");
+  write("compatibility.json", policy);
+  const before = readFileSync(path.join(root, "README.md"));
+  assert.match((await checkCompatibility(root, { development: development(policy, root) })).join("\n"),
+    /Full verification has no implemented plan for native-1.3.1/);
+  assert.throws(() => writeCompatibilityUpdates(root), /Cannot synchronize unimplemented verification declarations/);
+  assert.deepEqual(readFileSync(path.join(root, "README.md")), before);
+  assert.throws(() => fullVerificationPlan("native-1.3.1"), /no implemented plan/);
+  assert.throws(() => fullVerificationPlan("native-1.6.0"), /no implemented plan/);
+});
+
+test("the retained full plan includes installed consumers, recovery and public SQLite behavior", () => {
+  const plan = fullVerificationPlan("native-1.3.0", { socialArchive: "candidate.tgz", socialReceipt: "recovery.json" });
+  const steps = new Map(plan.map(([label, ...args]) => [label, args]));
+  assert.equal(steps.size, plan.length);
+  for (const label of ["install-lifecycle", "packed-single-plugin", "npm-packed-plugin", "sqlite",
+    "sitemap-sqlite", "robots-sqlite", "llms-sqlite", "taxonomy-archive-html", "ownership-conflicts-sqlite"]) {
+    assert.ok(steps.has(label), `${label} must run for the full lane`);
+  }
+  assert.deepEqual(steps.get("social-save-recovery"), ["social-save-recovery-smoke.mjs", "--target", "native-1.3.0",
+    "--mode", "green", "--archive", "candidate.tgz", "--receipt", "recovery.json"]);
+  assert.deepEqual(steps.get("score-scan-source-sqlite"), ["score-scan-source-smoke.mjs", "--target", "native-1.3.0"]);
+});
+
+test("the new native target runs the complete full plan with its own recovery and scan scope", () => {
+  const plan = fullVerificationPlan("native-1.5.0", { socialArchive: "new-candidate.tgz", socialReceipt: "new-recovery.json" });
+  assert.deepEqual(plan.map(([label]) => label), fullVerificationPlan("native-1.3.0").map(([label]) => label));
+  const steps = new Map(plan.map(([label, ...args]) => [label, args]));
+  assert.deepEqual(steps.get("social-save-recovery"), ["social-save-recovery-smoke.mjs", "--target", "native-1.5.0",
+    "--mode", "green", "--archive", "new-candidate.tgz", "--receipt", "new-recovery.json"]);
+  assert.deepEqual(steps.get("score-scan-source-sqlite"), ["score-scan-source-smoke.mjs", "--target", "native-1.5.0"]);
 });
 
 test("promoting an unsupported target detects stale docs and peers and refuses to advertise it", t => {

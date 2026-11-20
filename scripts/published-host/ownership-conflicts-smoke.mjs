@@ -1,10 +1,11 @@
+import { requireFullVerificationPlan } from "./verification-plan.mjs";
 // Saved ownership and guarded legacy removal through the published dispatcher.
 // Every fixture lives in one migrated SQLite :memory: database; no server runs.
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { hostPackageRoot, sourceRoot, target } from "./host-loader.mjs";
 
-assert.ok(["native-1.1.0", "native-1.2.0", "native-1.3.0"].includes(target.name), "ownership smoke requires a verified native target");
+requireFullVerificationPlan(target.name);
 assert.equal(process.versions.node, "24.19.0");
 let networkAttempts = 0;
 globalThis.fetch = async () => {

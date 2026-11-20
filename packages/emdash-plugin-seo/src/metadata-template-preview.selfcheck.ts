@@ -522,12 +522,21 @@ const previewInput = (patch: Record<string, unknown> = {}) => ({ collection: "po
 	item.data.featured_image = local;
 	const effective = () => resolveEffectiveContentMetadata(h.ctx, "notes", item);
 	const savedPreview = () => call("admin-entry-preview", { ref: "notes:n1", entryOnly: true }, h.ctx);
-	const publicContributions = () => hook({ page: {
+	const publicContributions = (rendered: { image?: string; seo?: { ogImage: string } } = {}) => hook({ page: {
 		url: "https://example.com/notes/field-day", path: "/notes/field-day", locale: "en",
 		kind: "content", canonical: "https://example.com/notes/field-day",
 		content: { collection: "notes", id: "n1", slug: "field-day" }, seo: {},
 		articleMeta: {}, siteName: "Example Studio", siteUrl: "https://example.com",
+		...rendered,
 	} }, h.ctx);
+	const routeImage = "https://example.com/share/field-day.jpg";
+	async function checkRenderedImage(label: string, expected: string, rendered: Parameters<typeof publicContributions>[0]) {
+		const contributions = await publicContributions(rendered);
+		for (const key of ["og:image", "twitter:image"]) {
+			const images = contributions.filter((entry: any) => (entry.property ?? entry.name) === key);
+			check(label + ": " + key, images.length === 1 && images[0].content === expected);
+		}
+	}
 	const assertImage = async (label: string, expected: string, source: string) => {
 		const metadata = await effective();
 		const preview = await savedPreview();
@@ -547,6 +556,7 @@ const previewInput = (patch: Record<string, unknown> = {}) => ({ collection: "po
 
 	item.seo = { image: "https://example.com/entry-social.jpg" };
 	await assertImage("specific SEO image takes precedence", "https://example.com/entry-social.jpg", "core-seo");
+	await checkRenderedImage("saved entry image wins over a route card", item.seo.image, { image: routeImage });
 	item.seo.image = "/_emdash/api/media/file/manual-social.jpg";
 	await assertImage("native SEO picker image takes precedence", "https://example.com/_emdash/api/media/file/manual-social.jpg", "core-seo");
 	h.legacyOverrides.set("notes:n1", { ogImage: "https://example.com/legacy-social.jpg" });
@@ -559,6 +569,10 @@ const previewInput = (patch: Record<string, unknown> = {}) => ({ collection: "po
 	await assertImage("declared image alias uses the shared fallback", featuredUrl, "content");
 	delete item.data.hero_image;
 	await assertImage("site image follows an absent featured image", fallbackUrl, "site-default");
+	await checkRenderedImage("route card wins over a site fallback", routeImage, { image: routeImage });
+	await checkRenderedImage("route SEO card wins over generic route artwork", routeImage,
+		{ image: "https://example.com/cover.jpg", seo: { ogImage: "/share/field-day.jpg" } });
+	await checkRenderedImage("an invalid route card preserves the site fallback", fallbackUrl, { image: "data:image/png,abc" });
 
 	for (const unsafe of [
 		"javascript:alert(1)", "java\nscript:alert(1)", "java\tscript:alert(1)",

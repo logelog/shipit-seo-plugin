@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0-beta.58 (release candidate)
+
+- Preserve a theme's per-page social sharing card when an entry would use the
+  site-wide default image. Saved entry images keep their existing priority.
+- Add a pinned native EmDash/admin 1.5.0 target for SQLite consumers, including
+  route ownership, verification metadata and robots previews.
+- Display the observed robots.txt cache policy, including the staging
+  response on EmDash 1.5.0.
+- Run the full native checks only for explicitly registered targets.
+
 ## 0.4.0-beta.57
 
 - Keep scores below the Good band until a focus keyword is set. Missing

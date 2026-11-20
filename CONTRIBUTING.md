@@ -20,12 +20,12 @@ git switch -c fix/search-preview upstream/main
 ```
 
 <!-- compatibility:development:start -->
-The default development target is **native-1.3.1** (EmDash/admin 1.3.1).
+The default development target is **native-1.5.0** (EmDash/admin 1.5.0).
 Use Node **24.19.0**, pnpm **11.19.0**, Astro **7.3.2** and SQLite.
-The fixture is `integration/emdash/published-host-1.3.1`.
+The fixture is `integration/emdash/published-host-1.5.0`.
 
-Retained native targets: `native-1.3.0`.
-The current target implements quick verification; full verification is not implemented for this target.
+Retained native targets: `native-1.3.1`, `native-1.3.0`.
+The current target implements quick and full verification.
 <!-- compatibility:development:end -->
 
 Use Linux or WSL2, with a WSL checkout on the Linux filesystem. Install nvm

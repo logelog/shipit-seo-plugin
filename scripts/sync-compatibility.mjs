@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { compatibilityRoot, expectedPackagePins, hostPeerRange, readCompatibility, selectCompatibilityTarget } from "./compatibility.mjs";
 import { runtimeHostSupportErrors } from "./runtime-host-compatibility.mjs";
+import { verificationImplementationErrors } from "./published-host/verification-plan.mjs";
 
 export const managedDocuments = Object.freeze({
   "README.md": "support",
@@ -148,6 +149,7 @@ export async function checkCompatibility(root = compatibilityRoot, { development
   const errors = compatibilityUpdates(root, policy).map(({ name }) => `${name}: compatibility values are stale; run pnpm sync:compatibility.`);
   errors.push(...checkFixtureCompatibility(root, policy));
   errors.push(...runtimeHostSupportErrors(root, policy));
+  errors.push(...verificationImplementationErrors(policy));
   const source = read(root, "packages/emdash-plugin-seo/src/admin-contract.ts");
   const product = readJson(root, "packages/emdash-plugin-seo/package.json");
   if (!source.includes(`export const SEO_ENGINE_VERSION = "${product.version}";`)) errors.push("Engine version differs from the product package version.");
@@ -166,6 +168,8 @@ export function writeCompatibilityUpdates(root = compatibilityRoot) {
   const policy = readCompatibility(root);
   const unsupported = runtimeHostSupportErrors(root, policy);
   if (unsupported.length) throw new Error(`Cannot synchronize unsupported runtime declarations:\n${unsupported.join("\n")}`);
+  const unimplemented = verificationImplementationErrors(policy);
+  if (unimplemented.length) throw new Error(`Cannot synchronize unimplemented verification declarations:\n${unimplemented.join("\n")}`);
   const updates = compatibilityUpdates(root, policy);
   for (const { name } of updates) {
     const file = path.join(root, name);

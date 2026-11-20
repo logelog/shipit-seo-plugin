@@ -1,3 +1,4 @@
+import { requireFullVerificationPlan } from "./verification-plan.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -6,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { createEnvironment } from "./environment.mjs";
 
 const environment = createEnvironment();
-assert.ok(["native-1.2.0", "native-1.3.0"].includes(environment.target.name), "npm verification requires a supported full native target");
+requireFullVerificationPlan(environment.target.name);
 const directory = new URL("package-candidate/", environment.target.outputRoot);
 const receipt = JSON.parse(readFileSync(new URL("receipt.json", directory), "utf8"));
 assert.equal(receipt.status, "packed-consumer-verified");

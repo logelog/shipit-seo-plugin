@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "currentTarget": "native-1.3.1",
-  "retainedTargets": ["native-1.3.0"],
+  "currentTarget": "native-1.5.0",
+  "retainedTargets": ["native-1.3.1", "native-1.3.0"],
   "toolchain": {
     "node": "24.19.0",
     "nodeRange": ">=24.19.0 <25",
@@ -9,6 +9,14 @@
     "astro": "7.3.2"
   },
   "targets": {
+    "native-1.5.0": {
+      "emdash": "1.5.0",
+      "admin": "1.5.0",
+      "dependencyRoot": "integration/emdash/published-host-1.5.0",
+      "port": 4366,
+      "verifyModes": ["quick", "full"],
+      "reviewedLockSha256": "e155d6f32253f2b4567ad12e66c230038328ef9cf6110ab765ebf857bc879738"
+    },
     "native-1.3.1": {
       "emdash": "1.3.1",
       "admin": "1.3.1",
